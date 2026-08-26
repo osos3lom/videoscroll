@@ -55,11 +55,21 @@ export const resolveVideoPath = (fileName: string): string | null => {
 }
 
 export const listVideos = (): LocalVideo[] => {
-    if (!fs.existsSync(VIDEOS_DIR)) return []
+    const publicVideos = path.join(process.cwd(), 'public', 'videos')
+    const rootVideos = path.join(process.cwd(), 'videos')
+
+    const targetDir =
+        fs.existsSync(publicVideos) && fs.readdirSync(publicVideos).some(isVideoFile)
+            ? publicVideos
+            : fs.existsSync(rootVideos) && fs.readdirSync(rootVideos).some(isVideoFile)
+            ? rootVideos
+            : publicVideos
+
+    if (!fs.existsSync(targetDir)) return []
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
     return fs
-        .readdirSync(VIDEOS_DIR)
+        .readdirSync(targetDir)
         .filter(isVideoFile)
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
         .map((fileName) => {
@@ -69,7 +79,7 @@ export const listVideos = (): LocalVideo[] => {
                 fileName,
                 title: path.basename(fileName, path.extname(fileName)),
                 src: `${basePath}/videos/${encodeURIComponent(fileName)}`,
-                size: fs.statSync(path.join(VIDEOS_DIR, fileName)).size,
+                size: fs.statSync(path.join(targetDir, fileName)).size,
             }
         })
 }

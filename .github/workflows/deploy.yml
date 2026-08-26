@@ -42,7 +42,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
 
       - name: Setup GitHub Pages configuration
@@ -51,6 +51,13 @@ jobs:
 
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+
+      - name: Prepare demo videos
+        run: |
+          mkdir -p public/videos
+          if [ -d "videos" ]; then
+            cp -rn videos/* public/videos/ 2>/dev/null || true
+          fi
 
       - name: Build Next.js static site
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
