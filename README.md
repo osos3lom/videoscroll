@@ -1,130 +1,241 @@
 <p align="center">
-  <img src="public/icon-256x256.png" alt="Local Video Scroller Logo" width="128" style="border-radius: 24px;" />
+  <img src="public/icon-256x256.png" alt="VideoScroll Logo" width="120" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);" />
 </p>
 
-<div dir="rtl" align="right">
+<h1 align="center">VideoScroll 📱✨</h1>
+<p align="center">
+  <b>تطبيق ويب تقدمي (PWA) لتصفح مقاطع الفيديو القصيرة محلياً بالكامل شبيه بتيك توك وريلز</b><br>
+  <b>A 100% Offline & Local TikTok / Instagram Reels Style Short-Video Scroller PWA</b>
+</p>
 
-# مستعرض مقاطع الفيديو القصيرة (شبيه تيك توك / ريلز) - محلي بالكامل 📱
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16.3-black?style=for-the-badge&logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-19.2-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/PWA-Serwist-orange?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA" />
+  <img src="https://img.shields.io/badge/Offline-100%25%20Local-success?style=for-the-badge" alt="Offline Local" />
+</p>
 
-تطبيق ويب حديث ومتجاوب مستوحى من منصة تيك توك (TikTok) وإنستغرام ريلز (Instagram Reels)، مصمم للعمل **محلياً بالكامل (Offline/Local 100%)** دون الحاجة إلى أي اتصالات خارجية أو مفاتيح برمجية (API Keys). يتيح لك التطبيق تصفح مقاطع الفيديو الخاصة بك، وإبداء الإعجاب بها، وحفظها، ورفع مقاطع جديدة مباشرة من جهازك، مع دعم كامل لتطبيق الويب التقدمي (PWA) للعمل دون اتصال بالإنترنت.
-
----
-
-### 🚀 المميزات الرئيسية:
-- **تغذية ملء الشاشة مع التمرير العمودي (Vertical Scroll):** تجربة تصفح سلسة وسريعة لمقاطع الفيديو القصيرة تدعم السحب والتمرير.
-- **تفاعل محلي بالكامل:** إمكانية تسجيل الإعجابات وحفظ مقاطع الفيديو المفضلة (Bookmarks) محلياً عبر قاعدة بيانات ملفات مبسطة (`data/social.json`).
-- **رفع مقاطع الفيديو:** واجهة تفاعلية لرفع مقاطع الفيديو من الاستوديو، أو تصوير فيديو مباشر، أو اختيار ملف من جهازك وحفظه مباشرة في المجلد المحلي.
-- **ملف شخصي متكامل:** يعرض إحصائيات منشئ المحتوى (عدد المقاطع، إجمالي الإعجابات، إجمالي المحفوظات) مع شبكة لعرض مقاطع الفيديو المرفوعة.
-- **تطبيق ويب تقدمي (PWA) مدعوم بـ Serwist:** تثبيت التطبيق على الهواتف والأجهزة الذكية وتصفحه كأنه تطبيق محلي وسريع الاستجابة.
-- **دعم ميزات بث الفيديو المتقدمة:** تشغيل الفيديوهات مع دعم البحث (Seeking) والتحميل التدريجي للملفات (HTTP Range Requests).
-
----
-
-### 🛠️ التقنيات المستخدمة:
-- **Next.js 16 (React 19)** - لإعداد واجهات المستخدم وتوجيه الصفحات والـ APIs المحلية.
-- **TypeScript** - لضمان سلامة الأكواد والأنماط البرمجية.
-- **Serwist/Next** - لتهيئة خدمات PWA وإدارة التخزين المؤقت المتقدم.
-- **CSS Modules** - لتنسيق الواجهات بشكل أنيق ومتناسق ويدعم الهواتف.
+<p align="center">
+  <a href="#-باللغة-العربية"><b>العربية</b></a> •
+  <a href="#-in-english"><b>English</b></a> •
+  <a href="#-لقطات-الشاشة--screenshots"><b>Screenshots</b></a> •
+  <a href="#-هيكل-المشروع--project-structure"><b>Project Structure</b></a>
+</p>
 
 ---
 
-### 💻 متطلبات التشغيل والبدء:
+## 📸 لقطات الشاشة / Screenshots
 
-#### 1. استنساخ المشروع وتثبيت الحزم:
-```bash
-git clone <رابط-المستودع>
-cd videoscroll
-npm install
-```
-
-#### 2. إضافة مقاطع الفيديو الخاصة بك:
-قم بنسخ أي مقاطع فيديو ترغب في عرضها (يفضل صيغة `.mp4` بترميز H.264 وصوت AAC لضمان التوافق مع المتصفحات) إلى المجلد التالي في جذر المشروع:
-```
-videos/
-```
-*ملاحظة: يمكنك تسمية الملفات بأرقام مثل (`01-video.mp4`, `02-video.mp4`) للتحكم في ترتيب ظهورها بالتغذية.*
-
-#### 3. تشغيل خادم التطوير:
-```bash
-npm run dev
-```
-افتح الرابط التالي في المتصفح الخاص بك: [http://localhost:3000](http://localhost:3000)
-
-</div>
-
----
-
-<div dir="ltr" align="left">
-
-# Local Short Video Scroll (TikTok / Reels Clone) - 100% Offline/Local 📱
-
-A modern, responsive web application inspired by TikTok and Instagram Reels, designed to run **100% locally and offline**. It has zero external dependencies, no API keys required, and operates purely using your local disk storage. Browse your videos, like, bookmark, and upload new media directly from your device.
-
----
-
-### 🚀 Key Features:
-- **Vertical Fullscreen Video Feed:** A smooth, immersive vertical scrolling experience optimized for gesture/scroll swipe navigation.
-- **100% Local Interaction:** Like and save/bookmark videos offline. All state is managed locally via a simplified JSON database (`data/social.json`).
-- **Direct Local Uploads:** Upload media from your Photo Library, take a live video using your device camera, or select a file to save directly into the local `videos/` folder.
-- **Creator Dashboard / Profile:** Displays real-time creator statistics (number of videos, total likes, and total saves) along with a grid of all uploaded local videos.
-- **Progressive Web App (PWA) via Serwist:** Easily install the app on mobile and desktop platforms with offline caching support.
-- **Advanced Streaming Support:** Smooth video playback using HTTP range requests to allow quick seeking and scrub-to-play.
-
----
-
-### 🛠️ Tech Stack:
-- **Next.js 16 (React 19)** - App layout, server APIs, and server-side rendering/routing.
-- **TypeScript** - Type safety and structured patterns.
-- **Serwist/Next** - PWA service worker and custom offline caching strategies.
-- **CSS Modules** - Clean, scoped styling optimized for mobile viewports.
-
----
-
-### 💻 Getting Started:
-
-#### 1. Clone the repository and install dependencies:
-```bash
-git clone <repository-url>
-cd videoscroll
-npm install
-```
-
-#### 2. Drop your video clips:
-Copy any video files you want to browse into the following folder at the root of the project:
-```
-videos/
-```
-*Tip: `.mp4` (H.264 + AAC) is highly recommended for cross-browser compatibility. You can prefix files with numbers (e.g., `01-clip.mp4`, `02-clip.mp4`) to control the feed order.*
-
-#### 3. Run the development server:
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser to start playing!
-
-</div>
-
----
-
-<h2 align="center">📸 لقطات الشاشة / Screenshots</h2>
-
-<table align="center">
+<table align="center" width="100%">
   <tr>
-    <td align="center" width="24%" valign="top">
-      <b>تغذية الفيديو (الرئيسية)<br>Main Video Feed</b><br/><br/>
+    <td align="center" width="25%" valign="top">
+      <b>🎬 تغذية الفيديو (الرئيسية)<br>Main Video Feed</b><br/><br/>
       <img src="public/screenshots/feed.png" alt="Video Feed" width="100%"/>
     </td>
-    <td align="center" width="24%" valign="top">
-      <b>الإعجابات والتفاعل<br>Likes & Interaction</b><br/><br/>
+    <td align="center" width="25%" valign="top">
+      <b>❤️ التفاعل والإعجابات<br>Likes & Interaction</b><br/><br/>
       <img src="public/screenshots/feed_active.png" alt="Likes and Actions" width="100%"/>
     </td>
-    <td align="center" width="24%" valign="top">
-      <b>المحفوظات وخيارات الرفع<br>Saved & Upload Options</b><br/><br/>
+    <td align="center" width="25%" valign="top">
+      <b>🔖 المحفوظات وخيارات الرفع<br>Saved & Upload Options</b><br/><br/>
       <img src="public/screenshots/saved.png" alt="Saved & Uploads" width="100%"/>
     </td>
-    <td align="center" width="24%" valign="top">
-      <b>الملف الشخصي للمنشئ<br>Creator Profile</b><br/><br/>
+    <td align="center" width="25%" valign="top">
+      <b>👤 الملف الشخصي للمنشئ<br>Creator Profile</b><br/><br/>
       <img src="public/screenshots/profile.png" alt="Creator Profile" width="100%"/>
     </td>
   </tr>
 </table>
+
+---
+
+<div id="-باللغة-العربية" dir="rtl" align="right">
+
+# 🇸🇦 باللغة العربية
+
+## 💡 عن المشروع
+**VideoScroll** هو تطبيق ويب تقدمي متكامل (Progressive Web App - PWA) يمنحك تجربة تصفح غامرة لمقاطع الفيديو العمودية القصيرة (على غرار TikTok وInstagram Reels وYouTube Shorts)، ولكن بميزة استثنائية: **يعمل محلياً بنسبة 100% دون الحاجة إلى إنترنت، وبلا أي خدمات سحابية أو مفاتيح API خارجية.**
+
+يقرأ التطبيق ملفات الفيديو المخزنة في جهازك مباشرة، ويتيح لك تشغيلها، والتنقل بينها بالسحب العمودي، وحفظ المقاطع المفضلة، وتسجيل الإعجابات، ورفع فيديوهات جديدة وحفظها على جهازك فوراً.
+
+---
+
+## 🌟 أبرز المميزات
+* **🚀 تصفح سلس وسريع (Smooth Snap Scroll):** دعم كامل لإيماءات السحب واللمس على الهواتف مع التمرير الذكي لملاءمة الشاشة.
+* **🔒 خصوصية تامة وبدون إنترنت (Zero-Cloud / 100% Offline):** جميع بياناتك وفيديوهاتك تبقى داخل جهازك ولا تغادره أبداً.
+* **❤️ نظام التفاعل والمحفوظات المحلي:** إمكانية إبداء الإعجاب وحفظ الفيديوهات (Bookmarks) مع تخزين دائم محلي في `data/social.json`.
+* **📤 رفع مباشر من الجهاز:** دعم رفع مقاطع الفيديو من الاستوديو، الكاميرا المباشرة، أو متصفح الملفات وتخزينها فورياً في مجلد الفيديوهات.
+* **👤 صفحة الملف الشخصي (Creator Profile):** استعراض إحصائيات منشئ المحتوى (عدد الفيديوهات، مجموع الإعجابات، المحفوظات) مع شبكة وسائط لجميع الفيديوهات المرفوعة.
+* **📱 تثبيت كتطبيق هاتف (PWA):** مدعوم بمكتبة **Serwist** لتثبيت الموقع كتطبيق مستقل على أجهزة iPhone وAndroid وWindows والعمل في وضع عدم الاتصال.
+* **⚡ بث فيديو تدريجي فائق الكفاءة:** دعم طلبات النطاق الجزئي (HTTP Range Requests) للتشغيل الفوري والتنقل السريع داخل الفيديو (Seeking) دون استهلاك غير ضروري للذاكرة.
+
+---
+
+## 🛠️ البنية البرمجية والتقنيات
+| التقنية | الاستخدام |
+| :--- | :--- |
+| **Next.js 16 (App & Pages API)** | بناء الواجهات وإدارة الـ API المحلية لخدمة الوسائط |
+| **React 19** | إدارة الحالة والتفاعل السريع مع واجهات المستخدم |
+| **TypeScript** | توفير أمان الأنماط البرمجية وكتابة كود عالي الجودة |
+| **Serwist / PWA** | إدارة عمال الخدمة (Service Workers) والتخزين المؤقت دون اتصال |
+| **SWR (Stale-While-Revalidate)** | جلب البيانات وتحديث التفاعلات بسلاسة وفورية |
+| **CSS Modules & Animate.css** | تصميم مخصص متجاوب بالكامل وتأثيرات حركية أنيقة |
+
+---
+
+## 🚀 البدء وطريقة التشغيل
+
+### 1. استنساخ المشروع وتثبيت الاعتماديات
+```bash
+git clone https://github.com/osos3lom/videoscroll.git
+cd videoscroll
+npm install
+```
+
+### 2. إضافة مقاطع الفيديو
+ضع ملفات الفيديو الخاصة بك داخل مجلد `videos/` الموجود في المجلد الرئيسي للمشروع:
+```text
+videos/
+ ├── 01-intro.mp4
+ ├── 02-beach.mp4
+ └── clip.webm
+```
+> **💡 نصائح هامة للفيديوهات:**
+> - صيغة **`.mp4`** (بترميز **H.264** وصوت **AAC**) هي الأكثر توافقاً مع جميع متصفحات الهواتف والكمبيوتر.
+> - يفضل استخدام أبعاد طولية بنسبة **9:16** لأفضل مظهر.
+> - يمكنك ترقيم أسماء الملفات مثل `01-` و `02-` للتحكم في ترتيب ظهورها في شريط التغذية.
+
+### 3. تشغيل خادم التطوير
+```bash
+npm run dev
+```
+افتح المتصفح وتوجه إلى: **`http://localhost:3000`**
+
+### 4. بناء نسخة الإنتاج (Production Build & PWA)
+```bash
+npm run build
+npm run start
+```
+
+</div>
+
+---
+
+<div id="-in-english" dir="ltr" align="left">
+
+# 🇬🇧 In English
+
+## 💡 About The Project
+**VideoScroll** is a modern, privacy-focused Progressive Web App (PWA) inspired by TikTok, Instagram Reels, and YouTube Shorts. It is architected to run **100% locally and offline on your machine or local network — with zero cloud lock-in, zero external API keys, and zero trackers.**
+
+All videos are streamed directly from your local filesystem with full support for vertical gestures, instant playback, likes, bookmarking, profile stats, and direct file uploads.
+
+---
+
+## 🌟 Key Features
+* **🚀 Smooth Vertical Feed:** Native-like vertical snap scrolling with touch swipe gestures and autoplay-on-view.
+* **🔒 100% Offline & Private:** No external network requests. Your media never leaves your hardware.
+* **❤️ Local Social Engagement:** Instant like and save/bookmark features persisted locally in `data/social.json`.
+* **📤 Direct Video Uploader:** Upload videos seamlessly via Photo Library, Camera capture, or File selector directly to your disk.
+* **👤 Creator Profile Hub:** View real-time creator metrics (total videos, likes count, bookmarks) and an interactive gallery of all uploaded items.
+* **📱 Progressive Web App (PWA):** Powered by **Serwist** service workers — install as a standalone native-feeling app on iOS, Android, macOS, and Windows.
+* **⚡ Smart HTTP Range Streaming:** Chunked streaming for lightning-fast seeking, scrubbing, and zero buffering overhead.
+
+---
+
+## 🛠️ Tech Stack & Architecture
+| Technology | Role |
+| :--- | :--- |
+| **Next.js 16** | Core framework, routing, and local media streaming endpoints |
+| **React 19** | Component rendering and reactive state architecture |
+| **TypeScript 5.9** | Strict type safety and predictable data structures |
+| **Serwist (@serwist/next)** | Modern service worker compiler and offline caching strategies |
+| **SWR** | Fast client-side cache and data revalidation |
+| **CSS Modules & Animate.css** | Modern dark-mode UI with fluid mobile animations |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone & Install Dependencies
+```bash
+git clone https://github.com/osos3lom/videoscroll.git
+cd videoscroll
+npm install
+```
+
+### 2. Add Your Videos
+Drop any video files into the root `videos/` folder:
+```text
+videos/
+ ├── 01-nature.mp4
+ ├── 02-city.mp4
+ └── sample.mov
+```
+> **💡 Pro-tips for media:**
+> - Standard **`.mp4`** (H.264 video codec + AAC audio) delivers the highest compatibility across mobile browsers.
+> - Vertical (9:16 aspect ratio) videos provide the best visual experience.
+> - Sort order follows filename alphanumeric order (prefixing with `01-`, `02-` is recommended).
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+Open **`http://localhost:3000`** in your browser.
+
+### 4. Build for Production & PWA
+```bash
+npm run build
+npm run start
+```
+
+</div>
+
+---
+
+## 📂 هيكل المشروع / Project Structure
+
+```text
+videoscroll/
+├── public/                  # Static assets, icons, manifest & screenshots
+│   ├── icon-192x192.png     # PWA App Icon
+│   ├── icon-256x256.png     # PWA High-res Icon
+│   ├── icon-512x512.png     # Splash & Store Icon
+│   ├── manifest.json        # Web App Manifest
+│   └── screenshots/         # Documentation preview images
+├── src/
+│   ├── components/          # Reusable UI elements (Navbar, Footer, VideoCard, Upload, etc.)
+│   ├── hooks/               # Custom hooks (useInViewPlayback, useSocialStorage)
+│   ├── lib/                 # Local filesystem video helpers & resolvers
+│   ├── pages/               # Application pages (Feed, Likes, Saved, Profile, API routes)
+│   │   ├── api/             # Local streaming & chunked upload endpoints
+│   │   ├── index.tsx        # Main full-screen video feed
+│   │   ├── likes.tsx        # Liked videos gallery
+│   │   ├── profile.tsx      # Creator statistics & uploads overview
+│   │   └── saved.tsx        # Bookmarked videos
+│   ├── styles/              # Global styling & animations
+│   ├── sw.ts                # Serwist service worker definition
+│   └── types/               # TypeScript interfaces & types
+├── videos/                  # Local video storage directory (MP4, WebM, MOV)
+├── data/                    # Local social database (social.json)
+└── serwist.config.mjs       # PWA build configuration
+```
+
+---
+
+## 📜 الأوامر المتاحة / Available Scripts
+
+| الأمر / Command | الوصف / Description |
+| :--- | :--- |
+| `npm run dev` | تشغيل خادم التطوير السريع / Start Next.js development server |
+| `npm run build` | بناء المشروع وتوليد ملفات PWA / Build Next.js & compile Serwist PWA |
+| `npm run start` | تشغيل نسخة الإنتاج / Start the production server |
+| `npm run lint` | فحص جودة الأكواد / Run ESLint check |
+| `npm run typecheck` | التحقق من صحة الأنواع / Run TypeScript type-checker |
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/osos3lom"><b>osos3lom</b></a>
+</p>
