@@ -2,9 +2,9 @@ import type { GetStaticProps, NextPage } from 'next'
 import Head from 'next/head'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoComponent from '../components/video'
-import Upload from '../components/upload'
 import { useSocialStorage } from '../hooks/useSocialStorage'
 import { listVideos, readSocial } from '../lib/videos'
+import { LOCAL_VIDEO_UPDATE_EVENT, listLocalVideos } from '../lib/videoStore'
 import type { LocalVideo, VideoSocial } from '../types/video'
 import styles from './index.module.css'
 
@@ -52,19 +52,47 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
     const containerRef = useRef<HTMLDivElement>(null)
     const [isMuted, setIsMuted] = useState(true)
 
-    const handleVideoAdded = useCallback((newVideo: LocalVideo) => {
-        setVideos((prev) => [newVideo, ...prev])
-        // Scroll to the newly added video at the top
-        setTimeout(() => {
-            const container = containerRef.current
-            if (container) {
-                container.scrollTo({ top: 0, behavior: 'smooth' })
-            }
-        }, 100)
-    }, [])
-
     const loadDemoVideos = useCallback(() => {
         setVideos(getDemoVideos())
+    }, [])
+
+    // Merge in videos uploaded previously (persisted in IndexedDB) and keep in
+    // sync with uploads triggered from elsewhere, e.g. the navbar's upload button.
+    useEffect(() => {
+        let cancelled = false
+
+        const mergeStoredVideos = (stored: LocalVideo[]) => {
+            if (cancelled) return
+            setVideos((prev) => {
+                const storedIds = new Set(stored.map((video) => video.videoId))
+                return [...stored, ...prev.filter((video) => !storedIds.has(video.videoId))]
+            })
+        }
+
+        // Initial hydration on mount — no scrolling, just fill in what's stored.
+        listLocalVideos()
+            .then(mergeStoredVideos)
+            .catch((caught) => console.error('[videoscroll] failed to load stored videos', caught))
+
+        // A genuinely new upload happened (from any page) — merge it in and
+        // jump to the top of the feed so it's immediately visible.
+        const handleLocalVideoUpdate = () => {
+            listLocalVideos()
+                .then((stored) => {
+                    mergeStoredVideos(stored)
+                    const container = containerRef.current
+                    if (container) {
+                        setTimeout(() => container.scrollTo({ top: 0, behavior: 'smooth' }), 100)
+                    }
+                })
+                .catch((caught) => console.error('[videoscroll] failed to load stored videos', caught))
+        }
+
+        window.addEventListener(LOCAL_VIDEO_UPDATE_EVENT, handleLocalVideoUpdate)
+        return () => {
+            cancelled = true
+            window.removeEventListener(LOCAL_VIDEO_UPDATE_EVENT, handleLocalVideoUpdate)
+        }
     }, [])
 
     // Unlock WebKit audio/video playback restrictions on iOS upon first user interaction
@@ -173,8 +201,6 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
                         </div>
                     )}
                 </div>
-
-                <Upload onVideoAdded={handleVideoAdded} />
             </main>
         </div>
     )

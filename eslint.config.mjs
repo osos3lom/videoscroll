@@ -2,7 +2,7 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
 import nextTypeScript from 'eslint-config-next/typescript'
 import prettier from 'eslint-config-prettier'
 
-export default [
+const config = [
     {
         ignores: ['.next/**', 'node_modules/**', 'public/sw.js', 'public/workbox-*.js', 'next-env.d.ts'],
     },
@@ -17,3 +17,5 @@ export default [
         },
     },
 ]
+
+export default config

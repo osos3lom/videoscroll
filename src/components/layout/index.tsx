@@ -1,5 +1,5 @@
 import { FC, ReactNode, useRef, useState } from 'react'
-import { useSWRConfig } from 'swr'
+import { addLocalVideo } from '../../lib/videoStore'
 import Navbar from '../navbar'
 import styles from './layout.module.css'
 
@@ -8,7 +8,6 @@ interface ILayoutProps {
 }
 
 const Layout: FC<ILayoutProps> = ({ children }) => {
-    const { mutate } = useSWRConfig()
     const inputFileRef = useRef<HTMLInputElement | null>(null)
     const [isUploading, setIsUploading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -27,24 +26,17 @@ const Layout: FC<ILayoutProps> = ({ children }) => {
         setError(null)
 
         try {
-            const response = await fetch('/api/videos/upload', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                    'x-file-name': encodeURIComponent(file.name),
-                },
-                body: file,
-            })
-
-            if (!response.ok) {
-                const body = await response.json().catch(() => ({}))
-                throw new Error(body.error ?? 'Upload failed')
-            }
-
-            // Trigger global cache revalidation for all pages listening to the video API
-            await mutate('/api/videos')
+            // Stored in IndexedDB, not uploaded anywhere — this app is a static
+            // export with no server, so the video feed listens for this write
+            // via the LOCAL_VIDEO_UPDATE_EVENT dispatched by addLocalVideo.
+            await addLocalVideo(file)
         } catch (caught) {
-            const message = caught instanceof Error ? caught.message : 'Upload failed'
+            const isQuotaError = caught instanceof DOMException && caught.name === 'QuotaExceededError'
+            const message = isQuotaError
+                ? 'Not enough storage space left in this browser for that video'
+                : caught instanceof Error
+                  ? caught.message
+                  : 'Upload failed'
             setError(message)
             // Auto clear error toast after 4 seconds
             setTimeout(() => {
