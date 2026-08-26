@@ -1,0 +1,108 @@
+.navbar {
+    position: fixed;
+    /* Account for iOS safe areas and add nice floating margin */
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: calc(100% - 32px);
+    max-width: 450px;
+    height: 60px;
+    border-radius: 30px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.navbar__container {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    height: 100%;
+    padding: 0 4px;
+}
+
+.navbar__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 100%;
+    gap: 3px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.navbar__item:hover {
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.navbar__icon {
+    color: rgba(255, 255, 255, 0.65);
+    transition: color 0.2s ease;
+}
+
+.navbar__icon_active {
+    color: #ffffff;
+    filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.3));
+}
+
+.navbar__label {
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.navbar__label_active {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.navbar__addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 10px;
+    transition: transform 0.15s ease;
+}
+
+.navbar__addButton:hover {
+    transform: scale(1.08);
+}
+
+.navbar__addButton:active {
+    transform: scale(0.95);
+}
+
+.navbar__addIconWrapper {
+    background-color: #ffffff;
+    width: 42px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 0;
+    /* TikTok style double shadows styling */
+    filter: drop-shadow(3px 0px 0px #fd3e3e) drop-shadow(-3px 0px 0px #4de8f4);
+    transition: filter 0.2s ease;
+}
+
+.navbar__addButton:hover .navbar__addIconWrapper {
+    filter: drop-shadow(4px 0px 0px #fd3e3e) drop-shadow(-4px 0px 0px #4de8f4);
+}
