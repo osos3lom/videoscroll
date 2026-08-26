@@ -12,8 +12,41 @@ interface LikesPageProps {
     initialSocial: Record<string, VideoSocial>
 }
 
+const getDemoVideos = (): LocalVideo[] => {
+    const basePath =
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/videoscroll')
+            ? '/videoscroll'
+            : process.env.NEXT_PUBLIC_BASE_PATH || ''
+
+    return [
+        {
+            videoId: 'v-clip1',
+            fileName: 'clip1.mp4',
+            title: 'Reel 1 - Ocean Views',
+            src: `${basePath}/videos/clip1.mp4`,
+            size: 8218006,
+        },
+        {
+            videoId: 'v-clip2',
+            fileName: 'clip2.mp4',
+            title: 'Reel 2 - Coastal Breeze',
+            src: `${basePath}/videos/clip2.mp4`,
+            size: 4310068,
+        },
+        {
+            videoId: 'v-clip3',
+            fileName: 'clip3.mp4',
+            title: 'Reel 3 - Scenic Waves',
+            src: `${basePath}/videos/clip3.mp4`,
+            size: 9072343,
+        },
+    ]
+}
+
 const LikesPage: NextPage<LikesPageProps> = ({ initialVideos = [], initialSocial = {} }) => {
-    const [videos] = useState<LocalVideo[]>(initialVideos)
+    const [videos] = useState<LocalVideo[]>(() =>
+        initialVideos.length > 0 ? initialVideos : getDemoVideos()
+    )
     const [social] = useSocialStorage(initialSocial)
 
     const likedVideos = videos.filter((v) => (social[v.videoId]?.likes ?? 0) > 0)

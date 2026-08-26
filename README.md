@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://osos3lom.github.io/videoscroll/" target="_blank"><img src="https://img.shields.io/badge/Live%20Demo-Visit%20Site-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Live Demo" /></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Next.js-16.3-black?style=for-the-badge&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/React-19.2-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -17,6 +21,7 @@
 </p>
 
 <p align="center">
+  <a href="https://osos3lom.github.io/videoscroll/"><b>🌐 التجربة الحية / Live Demo</b></a> •
   <a href="#-باللغة-العربية"><b>العربية</b></a> •
   <a href="#-in-english"><b>English</b></a> •
   <a href="#-لقطات-الشاشة--screenshots"><b>Screenshots</b></a> •
@@ -58,6 +63,10 @@
 **VideoScroll** هو تطبيق ويب تقدمي متكامل (Progressive Web App - PWA) يمنحك تجربة تصفح غامرة لمقاطع الفيديو العمودية القصيرة (على غرار TikTok وInstagram Reels وYouTube Shorts)، ولكن بميزة استثنائية: **يعمل محلياً بنسبة 100% دون الحاجة إلى إنترنت، وبلا أي خدمات سحابية أو مفاتيح API خارجية.**
 
 يقرأ التطبيق ملفات الفيديو المخزنة في جهازك مباشرة، ويتيح لك تشغيلها، والتنقل بينها بالسحب العمودي، وحفظ المقاطع المفضلة، وتسجيل الإعجابات، ورفع فيديوهات جديدة وحفظها على جهازك فوراً.
+
+## 🌐 تجربة التطبيق الحية (Live Demo)
+يمكنك استعراض تجربة حية للتطبيق مباشرة عبر متصفحك من خلال الرابط التالي:
+👉 **[osos3lom.github.io/videoscroll](https://osos3lom.github.io/videoscroll/)**
 
 ---
 
@@ -130,6 +139,10 @@ npm run start
 **VideoScroll** is a modern, privacy-focused Progressive Web App (PWA) inspired by TikTok, Instagram Reels, and YouTube Shorts. It is architected to run **100% locally and offline on your machine or local network — with zero cloud lock-in, zero external API keys, and zero trackers.**
 
 All videos are streamed directly from your local filesystem with full support for vertical gestures, instant playback, likes, bookmarking, profile stats, and direct file uploads.
+
+## 🌐 Live Demo
+You can view the live interactive preview of the application directly in your browser:
+👉 **[osos3lom.github.io/videoscroll](https://osos3lom.github.io/videoscroll/)**
 
 ---
 

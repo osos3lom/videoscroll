@@ -13,8 +13,41 @@ interface HomeProps {
     initialSocial: Record<string, VideoSocial>
 }
 
+const getDemoVideos = (): LocalVideo[] => {
+    const basePath =
+        typeof window !== 'undefined' && window.location.pathname.startsWith('/videoscroll')
+            ? '/videoscroll'
+            : process.env.NEXT_PUBLIC_BASE_PATH || ''
+
+    return [
+        {
+            videoId: 'v-clip1',
+            fileName: 'clip1.mp4',
+            title: 'Reel 1 - Ocean Views',
+            src: `${basePath}/videos/clip1.mp4`,
+            size: 8218006,
+        },
+        {
+            videoId: 'v-clip2',
+            fileName: 'clip2.mp4',
+            title: 'Reel 2 - Coastal Breeze',
+            src: `${basePath}/videos/clip2.mp4`,
+            size: 4310068,
+        },
+        {
+            videoId: 'v-clip3',
+            fileName: 'clip3.mp4',
+            title: 'Reel 3 - Scenic Waves',
+            src: `${basePath}/videos/clip3.mp4`,
+            size: 9072343,
+        },
+    ]
+}
+
 const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) => {
-    const [videos, setVideos] = useState<LocalVideo[]>(initialVideos)
+    const [videos, setVideos] = useState<LocalVideo[]>(() =>
+        initialVideos.length > 0 ? initialVideos : getDemoVideos()
+    )
     const [social, handleSocialChange] = useSocialStorage(initialSocial)
     const containerRef = useRef<HTMLDivElement>(null)
     const [isMuted, setIsMuted] = useState(true)
@@ -28,6 +61,10 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
                 container.scrollTo({ top: 0, behavior: 'smooth' })
             }
         }, 100)
+    }, [])
+
+    const loadDemoVideos = useCallback(() => {
+        setVideos(getDemoVideos())
     }, [])
 
     // Unlock WebKit audio/video playback restrictions on iOS upon first user interaction
@@ -122,13 +159,17 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
 
                     {videos.length === 0 && (
                         <div className={styles.app__empty}>
-                            <h1>No videos yet</h1>
+                            <h1>No videos loaded</h1>
                             <p>
-                                Add video files to the <code>public/videos/</code> folder, then build and deploy.
+                                Add video files to the <code>public/videos/</code> folder, or load our demo reels.
                             </p>
-                            <p className={styles.app__emptyHint}>
-                                Or tap <strong>+</strong> below to load one directly from your device.
-                            </p>
+                            <button
+                                type="button"
+                                className={styles.app__demoBtn}
+                                onClick={loadDemoVideos}
+                            >
+                                Load Demo Videos
+                            </button>
                         </div>
                     )}
                 </div>
@@ -141,7 +182,33 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
 
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     try {
-        const initialVideos = listVideos()
+        let initialVideos = listVideos()
+        if (initialVideos.length === 0) {
+            const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+            initialVideos = [
+                {
+                    videoId: 'v-clip1',
+                    fileName: 'clip1.mp4',
+                    title: 'Reel 1 - Ocean Views',
+                    src: `${basePath}/videos/clip1.mp4`,
+                    size: 8218006,
+                },
+                {
+                    videoId: 'v-clip2',
+                    fileName: 'clip2.mp4',
+                    title: 'Reel 2 - Coastal Breeze',
+                    src: `${basePath}/videos/clip2.mp4`,
+                    size: 4310068,
+                },
+                {
+                    videoId: 'v-clip3',
+                    fileName: 'clip3.mp4',
+                    title: 'Reel 3 - Scenic Waves',
+                    src: `${basePath}/videos/clip3.mp4`,
+                    size: 9072343,
+                },
+            ]
+        }
         const initialSocial = readSocial()
         return {
             props: {

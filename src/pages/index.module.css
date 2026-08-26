@@ -89,3 +89,25 @@
     padding: 0.2rem 0.6rem;
     color: #ffffff;
 }
+
+.app__demoBtn {
+    margin-top: 1.6rem;
+    padding: 1.2rem 2.4rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: linear-gradient(135deg, #fa5b30 0%, #ea4aaa 100%);
+    border: none;
+    border-radius: 2.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(250, 91, 48, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app__demoBtn:hover {
+    transform: scale(1.04);
+}
+
+.app__demoBtn:active {
+    transform: scale(0.96);
+}
