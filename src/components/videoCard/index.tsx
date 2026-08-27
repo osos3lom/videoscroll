@@ -66,9 +66,10 @@ const VideoCard: FC<IVideoCardProps> = ({ video }): JSX.Element => {
                     ref={videoRef}
                     className={styles.card__video}
                     src={`${video.src}#t=0.1`}
+                    poster={`/api/poster/${video.videoId}`}
                     loop
                     muted
-                    preload="metadata"
+                    preload="none"
                     onTimeUpdate={handleTimeUpdate}
                 />
 

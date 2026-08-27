@@ -1,4 +1,4 @@
-import type { GetStaticProps, NextPage } from 'next'
+import type { GetServerSideProps, NextPage } from 'next'
 import Head from 'next/head'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import VideoComponent from '../components/video'
@@ -24,21 +24,21 @@ const getDemoVideos = (): LocalVideo[] => {
             videoId: 'v-clip1',
             fileName: 'clip1.mp4',
             title: 'Reel 1 - Ocean Views',
-            src: `${basePath}/videos/clip1.mp4`,
+            src: `${basePath}/api/video/clip1.mp4`,
             size: 8218006,
         },
         {
             videoId: 'v-clip2',
             fileName: 'clip2.mp4',
             title: 'Reel 2 - Coastal Breeze',
-            src: `${basePath}/videos/clip2.mp4`,
+            src: `${basePath}/api/video/clip2.mp4`,
             size: 4310068,
         },
         {
             videoId: 'v-clip3',
             fileName: 'clip3.mp4',
             title: 'Reel 3 - Scenic Waves',
-            src: `${basePath}/videos/clip3.mp4`,
+            src: `${basePath}/api/video/clip3.mp4`,
             size: 9072343,
         },
     ]
@@ -51,6 +51,25 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
     const [social, handleSocialChange] = useSocialStorage(initialSocial)
     const containerRef = useRef<HTMLDivElement>(null)
     const [isMuted, setIsMuted] = useState(true)
+    const [activeIndex, setActiveIndex] = useState(0)
+
+    // Virtualization / Windowing: Track active scroll index to only mount
+    // video decoders in the DOM for current & immediately adjacent items (±1).
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+
+        const handleScroll = () => {
+            const itemHeight = container.clientHeight
+            if (itemHeight > 0) {
+                const newIndex = Math.round(container.scrollTop / itemHeight)
+                setActiveIndex((prev) => (prev !== newIndex ? newIndex : prev))
+            }
+        }
+
+        container.addEventListener('scroll', handleScroll, { passive: true })
+        return () => container.removeEventListener('scroll', handleScroll)
+    }, [])
 
     const loadDemoVideos = useCallback(() => {
         setVideos(getDemoVideos())
@@ -62,10 +81,11 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
         let cancelled = false
 
         const mergeStoredVideos = (stored: LocalVideo[]) => {
-            if (cancelled) return
+            if (cancelled || !stored || stored.length === 0) return
             setVideos((prev) => {
-                const storedIds = new Set(stored.map((video) => video.videoId))
-                return [...stored, ...prev.filter((video) => !storedIds.has(video.videoId))]
+                const newItems = stored.filter((s) => !prev.some((p) => p.videoId === s.videoId))
+                if (newItems.length === 0) return prev
+                return [...prev, ...newItems]
             })
         }
 
@@ -74,17 +94,10 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
             .then(mergeStoredVideos)
             .catch((caught) => console.error('[videoscroll] failed to load stored videos', caught))
 
-        // A genuinely new upload happened (from any page) — merge it in and
-        // jump to the top of the feed so it's immediately visible.
+        // A genuinely new upload happened (from any page) — merge it in
         const handleLocalVideoUpdate = () => {
             listLocalVideos()
-                .then((stored) => {
-                    mergeStoredVideos(stored)
-                    const container = containerRef.current
-                    if (container) {
-                        setTimeout(() => container.scrollTo({ top: 0, behavior: 'smooth' }), 100)
-                    }
-                })
+                .then(mergeStoredVideos)
                 .catch((caught) => console.error('[videoscroll] failed to load stored videos', caught))
         }
 
@@ -143,7 +156,7 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
-    // Scroll to hash on load or when videos change
+    // Scroll to hash on initial load only
     useEffect(() => {
         const hash = window.location.hash
         if (hash) {
@@ -152,12 +165,33 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
             if (targetElement) {
                 setTimeout(() => {
                     targetElement.scrollIntoView({ behavior: 'auto' })
-                }, 50)
+                }, 100)
             }
         }
-    }, [videos])
+    }, [])
 
     const toggleMute = useCallback(() => setIsMuted((muted) => !muted), [])
+
+    const handleNextVideo = useCallback(
+        (currentIndex: number) => {
+            const container = containerRef.current
+            if (!container) return
+
+            if (currentIndex < videos.length - 1) {
+                const nextIndex = currentIndex + 1
+                const targetElement = container.children[nextIndex] as HTMLElement | undefined
+                if (targetElement && typeof targetElement.scrollIntoView === 'function') {
+                    targetElement.scrollIntoView({ behavior: 'smooth' })
+                } else {
+                    container.scrollTo({
+                        top: nextIndex * container.clientHeight,
+                        behavior: 'smooth',
+                    })
+                }
+            }
+        },
+        [videos.length]
+    )
 
     return (
         <div className={styles.app}>
@@ -173,23 +207,48 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
 
             <main className={styles.app__frame}>
                 <div className={styles.app__videos} id="videos__container" ref={containerRef}>
-                    {videos.map((video, index) => (
-                        <VideoComponent
-                            key={video.videoId}
-                            video={video}
-                            social={social[video.videoId]}
-                            isMuted={isMuted}
-                            isFirst={index === 0}
-                            onToggleMute={toggleMute}
-                            onSocialChange={handleSocialChange}
-                        />
-                    ))}
+                    {videos.map((video, index) => {
+                        const isNear = Math.abs(index - activeIndex) <= 1
+                        const isMounted = Math.abs(index - activeIndex) <= 2
+
+                        if (!isMounted) {
+                            return (
+                                <div
+                                    key={video.videoId}
+                                    id={video.videoId}
+                                    style={{
+                                        height: '100%',
+                                        minHeight: '100%',
+                                        width: '100%',
+                                        scrollSnapAlign: 'start',
+                                        scrollSnapStop: 'always',
+                                        backgroundColor: '#000',
+                                        flexShrink: 0,
+                                    }}
+                                />
+                            )
+                        }
+
+                        return (
+                            <VideoComponent
+                                key={video.videoId}
+                                video={video}
+                                social={social[video.videoId]}
+                                isMuted={isMuted}
+                                isFirst={index === 0}
+                                isNearView={isNear}
+                                onToggleMute={toggleMute}
+                                onSocialChange={handleSocialChange}
+                                onEnded={() => handleNextVideo(index)}
+                            />
+                        )
+                    })}
 
                     {videos.length === 0 && (
                         <div className={styles.app__empty}>
                             <h1>No videos loaded</h1>
                             <p>
-                                Add video files to the <code>public/videos/</code> folder, or load our demo reels.
+                                Add video files to the <code>videos/</code> or <code>public/videos/</code> folder, or load our demo reels.
                             </p>
                             <button
                                 type="button"
@@ -206,8 +265,9 @@ const Home: NextPage<HomeProps> = ({ initialVideos = [], initialSocial = {} }) =
     )
 }
 
-export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+export const getServerSideProps: GetServerSideProps<HomeProps> = async ({ res }) => {
     try {
+        res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=59')
         let initialVideos = listVideos()
         if (initialVideos.length === 0) {
             const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
@@ -216,21 +276,21 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
                     videoId: 'v-clip1',
                     fileName: 'clip1.mp4',
                     title: 'Reel 1 - Ocean Views',
-                    src: `${basePath}/videos/clip1.mp4`,
+                    src: `${basePath}/api/video/clip1.mp4`,
                     size: 8218006,
                 },
                 {
                     videoId: 'v-clip2',
                     fileName: 'clip2.mp4',
                     title: 'Reel 2 - Coastal Breeze',
-                    src: `${basePath}/videos/clip2.mp4`,
+                    src: `${basePath}/api/video/clip2.mp4`,
                     size: 4310068,
                 },
                 {
                     videoId: 'v-clip3',
                     fileName: 'clip3.mp4',
                     title: 'Reel 3 - Scenic Waves',
-                    src: `${basePath}/videos/clip3.mp4`,
+                    src: `${basePath}/api/video/clip3.mp4`,
                     size: 9072343,
                 },
             ]
@@ -253,3 +313,4 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
 }
 
 export default Home
+

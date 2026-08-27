@@ -12,8 +12,10 @@ export interface IvideosProps {
     social?: VideoSocial
     isMuted: boolean
     isFirst?: boolean
+    isNearView?: boolean
     onToggleMute: () => void
     onSocialChange: (videoId: string, social: VideoSocial) => void
+    onEnded?: () => void
 }
 
 const VideoComponent: FC<IvideosProps> = ({
@@ -21,12 +23,31 @@ const VideoComponent: FC<IvideosProps> = ({
     social,
     isMuted,
     isFirst = false,
+    isNearView = true,
     onToggleMute,
     onSocialChange,
+    onEnded,
 }): JSX.Element => {
     const videoRef = useRef<HTMLVideoElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
     const [isPausedByUser, setIsPausedByUser] = useState(false)
-    const isInView = useInViewPlayback(videoRef, isFirst)
+    const isInView = useInViewPlayback(isNearView ? videoRef : containerRef, isFirst)
+
+    // Cleanup video decoder buffers on unmount or when leaving active window
+    useEffect(() => {
+        const element = videoRef.current
+        return () => {
+            if (element) {
+                try {
+                    element.pause()
+                    element.removeAttribute('src')
+                    element.load()
+                } catch {
+                    // ignore
+                }
+            }
+        }
+    }, [isNearView])
 
     // The whole point: only the video in view plays. Everything else is paused
     // and rewound, so we never hold more than one active decode.
@@ -39,7 +60,7 @@ const VideoComponent: FC<IvideosProps> = ({
             element.setAttribute('playsinline', '')
             element.setAttribute('webkit-playsinline', 'true')
         }
-    }, [isMuted])
+    }, [isMuted, isNearView])
 
     useEffect(() => {
         const element = videoRef.current
@@ -70,22 +91,39 @@ const VideoComponent: FC<IvideosProps> = ({
         }
     }
 
+    const handleError = () => {
+        console.error(`[videoscroll] Error loading video: ${video.fileName}`)
+        if (isInView && onEnded) {
+            setTimeout(() => {
+                onEnded()
+            }, 1200)
+        }
+    }
+
+    const posterUrl = `/api/poster/${video.videoId}`
+
     return (
-        <div className={styles.video} id={video.videoId}>
-            <video
-                ref={videoRef}
-                className={styles.video__element}
-                src={video.src}
-                loop
-                muted={isMuted}
-                autoPlay={isInView}
-                playsInline
-                {...({ 'webkit-playsinline': 'true' } as Record<string, string>)}
-                preload={isInView || isFirst ? 'auto' : 'none'}
-                disablePictureInPicture
-                onCanPlay={handleCanPlay}
-                onLoadedMetadata={handleCanPlay}
-            />
+        <div ref={containerRef} className={styles.video} id={video.videoId}>
+            {isNearView ? (
+                <video
+                    ref={videoRef}
+                    className={styles.video__element}
+                    src={video.src}
+                    poster={posterUrl}
+                    muted={isMuted}
+                    autoPlay={isInView}
+                    playsInline
+                    {...({ 'webkit-playsinline': 'true' } as Record<string, string>)}
+                    preload={isInView ? 'auto' : 'metadata'}
+                    disablePictureInPicture
+                    onCanPlay={handleCanPlay}
+                    onLoadedMetadata={handleCanPlay}
+                    onEnded={onEnded}
+                    onError={handleError}
+                />
+            ) : (
+                <div className={styles.video__element} style={{ backgroundColor: '#000' }} />
+            )}
 
             <button
                 type="button"

@@ -1,4 +1,4 @@
-import type { GetStaticProps, NextPage } from 'next'
+import type { GetServerSideProps, NextPage } from 'next'
 import Head from 'next/head'
 import { useState } from 'react'
 import { useSocialStorage } from '../hooks/useSocialStorage'
@@ -23,21 +23,21 @@ const getDemoVideos = (): LocalVideo[] => {
             videoId: 'v-clip1',
             fileName: 'clip1.mp4',
             title: 'Reel 1 - Ocean Views',
-            src: `${basePath}/videos/clip1.mp4`,
+            src: `${basePath}/api/video/clip1.mp4`,
             size: 8218006,
         },
         {
             videoId: 'v-clip2',
             fileName: 'clip2.mp4',
             title: 'Reel 2 - Coastal Breeze',
-            src: `${basePath}/videos/clip2.mp4`,
+            src: `${basePath}/api/video/clip2.mp4`,
             size: 4310068,
         },
         {
             videoId: 'v-clip3',
             fileName: 'clip3.mp4',
             title: 'Reel 3 - Scenic Waves',
-            src: `${basePath}/videos/clip3.mp4`,
+            src: `${basePath}/api/video/clip3.mp4`,
             size: 9072343,
         },
     ]
@@ -110,8 +110,9 @@ const ProfilePage: NextPage<ProfilePageProps> = ({ initialVideos = [], initialSo
     )
 }
 
-export const getStaticProps: GetStaticProps<ProfilePageProps> = async () => {
+export const getServerSideProps: GetServerSideProps<ProfilePageProps> = async ({ res }) => {
     try {
+        res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=59')
         const initialVideos = listVideos()
         const initialSocial = readSocial()
         return {
@@ -131,3 +132,4 @@ export const getStaticProps: GetStaticProps<ProfilePageProps> = async () => {
 }
 
 export default ProfilePage
+

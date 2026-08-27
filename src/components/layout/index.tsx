@@ -26,10 +26,32 @@ const Layout: FC<ILayoutProps> = ({ children }) => {
         setError(null)
 
         try {
-            // Stored in IndexedDB, not uploaded anywhere — this app is a static
-            // export with no server, so the video feed listens for this write
-            // via the LOCAL_VIDEO_UPDATE_EVENT dispatched by addLocalVideo.
-            await addLocalVideo(file)
+            // First attempt server-side upload so video streams without consuming mobile memory
+            let uploaded = false
+            try {
+                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+                const response = await fetch(`${basePath}/api/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'x-filename': encodeURIComponent(file.name),
+                        'Content-Type': file.type || 'application/octet-stream',
+                    },
+                    body: file,
+                })
+                if (response.ok) {
+                    uploaded = true
+                    window.dispatchEvent(new Event('videoscroll_local_video_update'))
+                    // Reload window or fetch dynamic server list
+                    window.location.reload()
+                }
+            } catch (apiErr) {
+                console.error('[upload] server upload unavailable, falling back to local store', apiErr)
+            }
+
+            if (!uploaded) {
+                // Fallback to IndexedDB if offline or server API route is unavailable
+                await addLocalVideo(file)
+            }
         } catch (caught) {
             const isQuotaError = caught instanceof DOMException && caught.name === 'QuotaExceededError'
             const message = isQuotaError

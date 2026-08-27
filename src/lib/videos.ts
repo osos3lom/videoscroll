@@ -21,7 +21,20 @@ const MIME_TYPES: Record<string, string> = {
     '.mov': 'video/quicktime',
 }
 
-export const isVideoFile = (fileName: string): boolean => VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase())
+export const isVideoFile = (fileName: string): boolean => {
+    if (!fileName || fileName.startsWith('.')) return false
+    const lower = fileName.toLowerCase()
+    if (
+        lower.includes('.optimizing.') ||
+        lower.includes('.tmp.') ||
+        lower.endsWith('.tmp') ||
+        lower.endsWith('.crdownload') ||
+        lower.endsWith('.part')
+    ) {
+        return false
+    }
+    return VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase())
+}
 
 export const mimeTypeFor = (fileName: string): string =>
     MIME_TYPES[path.extname(fileName).toLowerCase()] ?? 'application/octet-stream'
@@ -39,49 +52,78 @@ export const fromVideoId = (videoId: string): string | null => {
     }
 }
 
-/**
- * Resolves a filename to an absolute path inside VIDEOS_DIR.
- * Returns null if the name escapes the folder (path traversal) or isn't a video.
- */
-export const resolveVideoPath = (fileName: string): string | null => {
+export const resolveVideoPath = (fileOrId: string): string | null => {
+    let fileName = fileOrId
+    if (fileOrId.startsWith('v-')) {
+        const decoded = fromVideoId(fileOrId)
+        if (decoded) fileName = decoded
+    }
     const safeName = path.basename(fileName)
-    if (!safeName || safeName !== fileName || !isVideoFile(safeName)) return null
+    if (!safeName || !isVideoFile(safeName)) return null
 
-    const fullPath = path.join(VIDEOS_DIR, safeName)
-    const relative = path.relative(VIDEOS_DIR, fullPath)
-    if (relative.startsWith('..') || path.isAbsolute(relative)) return null
+    const candidates = [
+        path.join(process.cwd(), 'public', 'videos', safeName),
+        path.join(process.cwd(), 'videos', safeName),
+    ]
 
-    return fullPath
+    for (const fullPath of candidates) {
+        if (fs.existsSync(fullPath)) {
+            const relative = path.relative(path.dirname(fullPath), fullPath)
+            if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+                return fullPath
+            }
+        }
+    }
+
+    return null
+}
+
+let cachedVideos: { list: LocalVideo[]; timestamp: number } | null = null
+
+export const invalidateVideosCache = () => {
+    cachedVideos = null
 }
 
 export const listVideos = (): LocalVideo[] => {
+    const now = Date.now()
+    if (cachedVideos && now - cachedVideos.timestamp < 10000) {
+        return cachedVideos.list
+    }
+
     const publicVideos = path.join(process.cwd(), 'public', 'videos')
     const rootVideos = path.join(process.cwd(), 'videos')
 
-    const targetDir =
-        fs.existsSync(publicVideos) && fs.readdirSync(publicVideos).some(isVideoFile)
-            ? publicVideos
-            : fs.existsSync(rootVideos) && fs.readdirSync(rootVideos).some(isVideoFile)
-            ? rootVideos
-            : publicVideos
+    const fileMap = new Map<string, string>()
 
-    if (!fs.existsSync(targetDir)) return []
+    if (fs.existsSync(publicVideos)) {
+        for (const f of fs.readdirSync(publicVideos)) {
+            if (isVideoFile(f)) fileMap.set(f, path.join(publicVideos, f))
+        }
+    }
+    if (fs.existsSync(rootVideos)) {
+        for (const f of fs.readdirSync(rootVideos)) {
+            if (isVideoFile(f) && !fileMap.has(f)) fileMap.set(f, path.join(rootVideos, f))
+        }
+    }
+
+    if (fileMap.size === 0) return []
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
-    return fs
-        .readdirSync(targetDir)
-        .filter(isVideoFile)
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
-        .map((fileName) => {
+    const list = Array.from(fileMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+        .map(([fileName, fullPath]) => {
             const videoId = toVideoId(fileName)
             return {
                 videoId,
                 fileName,
                 title: path.basename(fileName, path.extname(fileName)),
-                src: `${basePath}/videos/${encodeURIComponent(fileName)}`,
-                size: fs.statSync(path.join(targetDir, fileName)).size,
+                src: `${basePath}/api/video/${encodeURIComponent(fileName)}`,
+                size: fs.statSync(fullPath).size,
             }
         })
+
+    cachedVideos = { list, timestamp: now }
+    return list
 }
 
 export const readSocial = (): Record<string, VideoSocial> => {
