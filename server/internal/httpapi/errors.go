@@ -59,15 +59,24 @@ var errorCodes = map[string]string{
 	"chunk too large":                   "upload_invalid",
 	media.ErrInvalidTitle.Error():       "invalid_title",
 
+	// Share links
+	"this share link is invalid, expired, or stopped":               "share_not_found",
+	"share link not found":                                          "share_not_found",
+	"you can only stop your own share links":                        "not_your_share",
+	"expiry must be 1, 7 or 30 days, or 0 for no expiry":            "invalid_request",
+	"too many people are watching shared videos, try again shortly": "public_busy",
+
 	// Unexpected failures: the details are in the server log.
-	"could not sign out":        "server_error",
-	"could not change password": "server_error",
-	"could not create account":  "server_error",
-	"could not reset password":  "server_error",
-	"could not delete account":  "server_error",
-	"could not rename video":    "server_error",
-	"could not delete video":    "server_error",
-	"upload failed":             "server_error",
+	"could not sign out":          "server_error",
+	"could not change password":   "server_error",
+	"could not create account":    "server_error",
+	"could not reset password":    "server_error",
+	"could not delete account":    "server_error",
+	"could not rename video":      "server_error",
+	"could not delete video":      "server_error",
+	"could not create share link": "server_error",
+	"could not stop share link":   "server_error",
+	"upload failed":               "server_error",
 }
 
 // errorCode returns the code for a message, or a generic one by status.

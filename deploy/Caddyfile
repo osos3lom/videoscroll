@@ -42,14 +42,15 @@ videoscroll.duckdns.org {
 			roll_size 10MB
 			roll_keep 5
 		}
-		# Media URLs carry a token as ?t=. It is short-lived, but it still has
-		# no business in a log file. (Authorization headers are redacted by
-		# Caddy by default.)
+		# Media URLs carry a token as ?t=, and public share links a code as
+		# ?s=. Neither has any business in a log file. (Authorization headers
+		# are redacted by Caddy by default.)
 		format filter {
 			wrap json
 			fields {
 				request>uri query {
 					delete t
+					delete s
 				}
 			}
 		}

@@ -190,6 +190,10 @@
     gap: 10px;
 }
 
+.profileShares {
+    margin: 0 16px;
+}
+
 .profileSectionHint {
     margin: -6px 16px 12px 16px;
     font-size: 1.25rem;

@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import useSWR from 'swr'
+import ShareList from '../components/shareList'
 import { useDialog } from '../hooks/useDialog'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useSession } from '../hooks/useSession'
@@ -451,6 +452,14 @@ const AdminPage = () => {
                         )
                     })}
                 </ul>
+            </section>
+
+            <section className={styles.section}>
+                <h2>روابط المشاركة</h2>
+                <p className={styles.muted}>
+                    كل رابط يفتح فيديو واحداً لأي شخص يملكه، للمشاهدة والتنزيل دون حساب.
+                </p>
+                <ShareList showCreator />
             </section>
 
             <section className={styles.section}>

@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import useSWR from 'swr'
 import { useDialog } from '../hooks/useDialog'
+import ShareList from '../components/shareList'
 import VideoCard from '../components/videoCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useSession, useSessionActions } from '../hooks/useSession'
@@ -225,6 +226,20 @@ const ProfilePage = () => {
                                 : 'حسابك يتيح المشاهدة فقط دون الرفع. تواصل مع المالك إذا كنت ترغب في نشر فيديوهات.'}
                         </p>
                     </div>
+                )}
+
+                {!isDemo && (
+                    <>
+                        <h2 className={styles.profileSectionTitle}>روابط المشاركة</h2>
+                        <p className={styles.profileSectionHint}>
+                            {isOwner
+                                ? 'الروابط العامة التي أنشأها جميع الأعضاء. أوقف أي رابط لم يعد مطلوباً.'
+                                : 'الروابط العامة التي أنشأتها لمشاركة الفيديوهات. أوقف أي رابط لم يعد مطلوباً.'}
+                        </p>
+                        <div className={styles.profileShares}>
+                            <ShareList showCreator={isOwner} />
+                        </div>
+                    </>
                 )}
             </main>
         </div>

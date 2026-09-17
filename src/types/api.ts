@@ -86,6 +86,32 @@ export interface InviteView {
     usedAt?: string
 }
 
+/** httpapi.ShareView: a member's public link, as listed to them. */
+export interface ShareView {
+    id: string
+    videoId: string
+    title: string
+    createdBy: string
+    createdByName: string
+    createdAt: string
+    /** Absent: the link works until it is stopped. */
+    expiresAt?: string
+}
+
+/** Days a new link lasts; 0 means until it is stopped. */
+export type ShareDays = 0 | 1 | 7 | 30
+
+/** httpapi.PublicShare: everything a person without an account learns. */
+export interface PublicShare {
+    title: string
+    width: number
+    height: number
+    duration: number
+    size: number
+    ext: string
+    expiresAt?: string
+}
+
 /** httpapi.statusResponse */
 export interface ServerStatus {
     videos: number

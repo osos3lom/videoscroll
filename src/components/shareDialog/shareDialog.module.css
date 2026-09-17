@@ -1,0 +1,74 @@
+.durations {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.legend {
+    margin: 0;
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.duration {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+
+/* The whole tile is the control; the dot would only add noise. */
+.duration input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.duration:focus-within {
+    outline: 2px solid #01feff;
+    outline-offset: 2px;
+}
+
+.selected {
+    border-color: #01feff;
+    background: rgba(1, 254, 255, 0.12);
+    color: #01feff;
+    font-weight: 700;
+}
+
+.link {
+    font-size: 1.4rem;
+    text-align: left;
+}
+
+.done {
+    align-self: center;
+    padding: 6px 16px;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: inherit;
+    font-size: 1.4rem;
+    cursor: pointer;
+}
+
+.ok,
+.error {
+    margin: 0;
+    font-size: 1.3rem;
+    text-align: center;
+}
+
+.ok {
+    color: #7affc4;
+}
+
+.error {
+    color: #ff7a9c;
+}

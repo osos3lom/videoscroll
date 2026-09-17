@@ -20,6 +20,28 @@ Use `✅` / `❌` and a note per device.
 | 6 | Rotating the phone doesn't break the layout | | | | |
 | 7 | **Profile → All videos** shows every video; rename works | | | | |
 
+## Gestures and downloads (on each phone)
+
+| # | Check | iPhone Safari | iPhone app | Android |
+| --- | --- | --- | --- | --- |
+| G1 | Double tap on the right: +10 s with the ripple; tap again quickly: +20 | | | |
+| G2 | Double tap on the left: −10 s | | | |
+| G3 | Single tap anywhere: pause / play (sides react after a short delay) | | | |
+| G4 | Drag left and right: the picture follows your finger and the time shows; release resumes | | | |
+| G5 | Scrub a landscape video too | | | |
+| G6 | Swiping up and down still changes video and never scrubs | | | |
+| G7 | Download from the feed and from Profile: the file saves with the video's title and plays | | | |
+
+## Share links (member on one phone, someone with no account on another)
+
+| # | Check | Result |
+| --- | --- | --- |
+| S1 | Share → 1 day → create; **Share** opens the share sheet, **Copy** copies | |
+| S2 | On a phone with no account (or a private tab), the link shows only that video, plays it, and downloads it | |
+| S3 | The page has no navigation, feed, or member names | |
+| S4 | The member stops the link from Profile; the other phone's reload says the link no longer works | |
+| S5 | The owner sees every member's links on Manage community and can stop them | |
+
 ## Accounts (owner on one device, member on another)
 
 | # | Check | Result |

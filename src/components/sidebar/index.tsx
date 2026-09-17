@@ -1,8 +1,10 @@
 import { MdFavorite, MdFileDownload, MdOutlineBookmark } from 'react-icons/md'
 import { RiShareForwardFill } from 'react-icons/ri'
 import styles from './sidebar.module.css'
-import { FC, JSX } from 'react'
+import { FC, JSX, useState } from 'react'
+import { IS_DEMO } from '../../lib/apiUrl'
 import { downloadVideo } from '../../lib/download'
+import ShareDialog from '../shareDialog'
 import { onShare } from '../../utils/share'
 import { getSocialResults } from '../../utils/socialResults'
 import type { LocalVideo, VideoSocial } from '../../types/api'
@@ -18,6 +20,8 @@ export interface ISidebarProps {
 const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizontal = false }): JSX.Element => {
     const likes = getSocialResults(social, 'likes')
     const bookmarks = getSocialResults(social, 'bookmarks')
+
+    const [isSharing, setIsSharing] = useState(false)
 
     const hasLiked = likes > 0
     const hasBookmarked = bookmarks > 0
@@ -74,11 +78,16 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizonta
             <button
                 type="button"
                 className={styles.sidebar__button}
-                onClick={() => onShare(video.title)}
+                // The demo has no server to make a public link with.
+                onClick={() => (IS_DEMO ? void onShare(video.title) : setIsSharing(true))}
                 aria-label="مشاركة الفيديو"
             >
                 <RiShareForwardFill size={40} />
             </button>
+
+            {isSharing && (
+                <ShareDialog videoId={video.videoId} title={video.title} onClose={() => setIsSharing(false)} />
+            )}
         </div>
     )
 }

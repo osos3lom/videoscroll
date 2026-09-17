@@ -36,6 +36,7 @@ type fixture struct {
 	layout  media.Layout
 	index   *media.Index
 	content []byte
+	srv     *Server
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -77,7 +78,7 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(srv.Close)
-	return &fixture{t, srv.Handler(), store, owner, viewer, signer, layout, index, content}
+	return &fixture{t, srv.Handler(), store, owner, viewer, signer, layout, index, content, srv}
 }
 
 // remoteAddrKey in a headers map sets the request's peer address instead.

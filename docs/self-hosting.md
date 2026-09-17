@@ -340,7 +340,29 @@ browser.
 
 **Videos:** the owner renames or deletes any video from **Profile → All
 videos**, using the pencil and bin buttons. Uploaders do the same for their
-own uploads.
+own uploads. Every member can download any video, from the feed or from
+their profile.
+
+### Sharing one video publicly
+
+Any member can press **Share** on a video, choose how long the link works
+(1 day, 7 days, 30 days, or until stopped), and send it. Whoever opens the
+link sees that one video, can play and download it, and sees nothing else.
+They need no account.
+
+- **Members** see and stop their own links under **Profile → Share links**.
+- **The owner** sees and stops everyone's, under **Manage community → Share
+  links** (or Profile).
+- A link also stops when its video is deleted, and pauses while its creator
+  is disabled.
+- Links cannot be shown again after they are made; make a new one instead.
+- At most 6 public streams run at once, so a link that spreads cannot slow
+  down members. Strangers beyond that see "try again in a minute".
+
+**Server update needed:** share links and downloads need the server version
+from the same commit, and `deploy/Caddyfile` now also strips `s` from logs.
+Install the new binary, copy the Caddyfile (keep your hostname), and run
+`sudo systemctl reload caddy` **before** pushing the frontend.
 
 ---
 
@@ -514,6 +536,20 @@ run `localStorage.videoscroll_sw = 'off'` in its console and reload.
   connection.
 - **Invite codes** have 128 bits of entropy, are single-use, expire, and are
   stored only as SHA-256 hashes.
+- **Share links** are the one way in without an account:
+  - each opens exactly one video, to watch and download, at
+    `…/videoscroll/watch#<code>`. The code is in the fragment, so GitHub
+    Pages never receives it; Caddy's log format strips it from API requests
+    (`?s=`).
+  - codes have 128 bits of entropy and are stored only as hashes, so a link
+    cannot be shown again, only stopped.
+  - a link stops working when it expires, when someone stops it, when its
+    video is deleted, or while the member who made it is disabled.
+  - the public page learns only the title, size, dimensions and expiry: no
+    names, ids or other videos.
+  - 30 failed lookups from one address in 15 minutes block that address.
+  - at most 6 public video streams run at once; members are never limited
+    by them.
 - **Media files** are opened through Go's `os.Root`, so no id can escape
   `videos/`. Responses are `Cache-Control: private`.
 - **The published bundle** reveals the API hostname, but nothing behind it

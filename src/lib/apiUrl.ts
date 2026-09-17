@@ -39,6 +39,22 @@ export function posterUrl(videoId: string, mediaToken: string): string {
     return apiUrl(`/api/poster/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
 }
 
+/*
+ * Public share links. The code goes in the query (as `s`), where the
+ * server's log filter strips it; the page that uses them keeps it in the
+ * fragment, so GitHub Pages never sees it either.
+ */
+const publicApi = (kind: string, code: string) => apiUrl(`/api/public/${kind}?s=${encodeURIComponent(code)}`)
+export const publicShareUrl = (code: string) => publicApi('share', code)
+export const publicVideoSrc = (code: string) => publicApi('video', code)
+export const publicPosterUrl = (code: string) => publicApi('poster', code)
+export const publicDownloadUrl = (code: string) => publicApi('download', code)
+
+/** The page a share link opens: `…/videoscroll/watch#<code>`. */
+export function shareLink(code: string): string {
+    return new URL(`${import.meta.env.BASE_URL}watch#${code}`, window.location.origin).href
+}
+
 /**
  * URL of a file shipped inside this build's own `public/` directory. Honours
  * `base`, so it resolves correctly under the `/videoscroll/` Pages prefix and

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"mime"
 	"net/http"
 	"os"
@@ -87,6 +88,10 @@ func (s *Server) handleDeleteVideo(w http.ResponseWriter, r *http.Request, user 
 		writeError(w, http.StatusInternalServerError, "could not delete video")
 		return
 	}
+	if err := s.shares.DeleteForVideo(meta.VideoID); err != nil {
+		// The links are dead anyway: publicShare requires a published video.
+		slog.Warn("stop share links of deleted video", "err", err)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -118,10 +123,14 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	if meta, ok := s.index.Get(id); ok {
 		title = meta.Title
 	}
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
-		"filename": downloadName(title, name),
-	}))
+	setAttachment(w, title, name)
 	s.serveFile(w, r, s.videosRoot, name, media.MimeType(name))
+}
+
+func setAttachment(w http.ResponseWriter, title, fileName string) {
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+		"filename": downloadName(title, fileName),
+	}))
 }
 
 // downloadName turns a title into a safe file name that keeps the video's
@@ -152,6 +161,10 @@ func (s *Server) handlePoster(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "poster not found")
 		return
 	}
+	s.servePoster(w, r, id)
+}
+
+func (s *Server) servePoster(w http.ResponseWriter, r *http.Request, id string) {
 	path := s.layout.PosterPath(id)
 	if path == "" {
 		writeError(w, http.StatusNotFound, "poster not found")

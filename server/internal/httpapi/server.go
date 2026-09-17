@@ -17,6 +17,7 @@ import (
 	"github.com/osos3lom/videoscroll/server/internal/config"
 	"github.com/osos3lom/videoscroll/server/internal/jobs"
 	"github.com/osos3lom/videoscroll/server/internal/media"
+	"github.com/osos3lom/videoscroll/server/internal/shares"
 	"github.com/osos3lom/videoscroll/server/internal/store"
 	"github.com/osos3lom/videoscroll/server/internal/users"
 )
@@ -28,6 +29,7 @@ type Server struct {
 	users  *users.Store
 	signer *auth.Signer
 	jobs   *jobs.Manager
+	shares *shares.Store
 
 	// os.Root confines every media open to its directory, whatever the id
 	// decodes to.
@@ -40,6 +42,11 @@ type Server struct {
 	loginByPair *auth.Limiter
 	loginByUser *auth.Limiter
 	joinByIP    *auth.Limiter
+
+	// Public share links: failed lookups per address, and a cap on
+	// concurrent public streams.
+	publicByIP    *auth.Limiter
+	publicStreams chan struct{}
 
 	social    map[string]json.RawMessage
 	startedAt time.Time
@@ -64,17 +71,25 @@ func New(d Deps) (*Server, error) {
 		return nil, err
 	}
 
+	shareStore, err := shares.Open(filepath.Join(d.Layout.Data, "shares.json"))
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
-		cfg: d.Config, layout: d.Layout, index: d.Index, users: d.Users, signer: d.Signer, jobs: d.Jobs,
+		shares: shareStore,
+		cfg:    d.Config, layout: d.Layout, index: d.Index, users: d.Users, signer: d.Signer, jobs: d.Jobs,
 		videosRoot:  videosRoot,
 		postersRoot: postersRoot,
 		loginByIP:   auth.NewLimiter(20, 15*time.Minute),
 		loginByPair: auth.NewLimiter(10, 15*time.Minute),
 		// High enough that locking an account out takes a botnet.
-		loginByUser: auth.NewLimiter(200, 15*time.Minute),
-		joinByIP:    auth.NewLimiter(10, 15*time.Minute),
-		social:      map[string]json.RawMessage{},
-		startedAt:   time.Now(),
+		loginByUser:   auth.NewLimiter(200, 15*time.Minute),
+		joinByIP:      auth.NewLimiter(10, 15*time.Minute),
+		publicByIP:    auth.NewLimiter(30, 15*time.Minute),
+		publicStreams: make(chan struct{}, publicStreamSlots),
+		social:        map[string]json.RawMessage{},
+		startedAt:     time.Now(),
 	}
 	// Legacy per-video like/bookmark counts, read once.
 	_, _ = store.ReadJSON(filepath.Join(d.Layout.Data, "social.json"), &s.social)
@@ -92,6 +107,10 @@ func (s *Server) SweepLimiters() {
 	s.loginByPair.Sweep()
 	s.loginByUser.Sweep()
 	s.joinByIP.Sweep()
+	s.publicByIP.Sweep()
+	if err := s.shares.Prune(); err != nil {
+		slog.Warn("prune expired share links", "err", err)
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -117,6 +136,17 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/video/{id}", s.requireMedia(s.handleVideo))
 	mux.HandleFunc("GET /api/poster/{id}", s.requireMedia(s.handlePoster))
 	mux.HandleFunc("GET /api/download/{id}", s.requireMedia(s.handleDownload))
+
+	mux.HandleFunc("POST /api/shares", s.requireUser(s.handleCreateShare))
+	mux.HandleFunc("GET /api/shares", s.requireUser(s.handleListShares))
+	mux.HandleFunc("DELETE /api/shares/{id}", s.requireUser(s.handleDeleteShare))
+
+	// The only routes besides /api/health that need no account: each is
+	// gated by a share code (?s=) for exactly one video.
+	mux.HandleFunc("GET /api/public/share", s.handlePublicShare)
+	mux.HandleFunc("GET /api/public/video", s.handlePublicVideo)
+	mux.HandleFunc("GET /api/public/poster", s.handlePublicPoster)
+	mux.HandleFunc("GET /api/public/download", s.handlePublicDownload)
 
 	mux.HandleFunc("POST /api/uploads", s.requireUploader(s.handleCreateUpload))
 	mux.HandleFunc("PUT /api/uploads/{id}", s.requireUploader(s.handleAppendUpload))

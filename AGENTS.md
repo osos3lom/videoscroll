@@ -22,7 +22,8 @@ History: this was Next.js, then Vite + Express, now Vite + Go. References to
 index.html              app shell (static meta)
 vite.config.mts         webmanifest, CSP meta, demo clips, sw.js build
 src/                    browser only
-  App.tsx               auth gate + routes (login, join, choose-password, feed, likes, saved, profile, admin)
+  App.tsx               public /watch page, then the auth gate + member routes
+  routes/watch.tsx      public page of one shared video (no account, plain fetch)
   lib/accounts.ts       phone display, temporary passwords, the "your account" message
   lib/demoVideos.ts     bundled clips for the no-API Pages build
   types/api.ts          hand-mirrored Go wire types
@@ -32,11 +33,14 @@ src/                    browser only
   lib/mediaCache/       chunkStore (IndexedDB, DOM-free), prefetcher, network hints
   sw/sw.ts              service worker: serves cached video ranges
   hooks/useVideos.ts    the single source of video data
+  hooks/useVideoGestures.ts  tap / double-tap skip / horizontal scrub on feed videos
+  hooks/useDialog.tsx   in-app confirm and prompt
 server/                 Go module
   cmd/videoscroll/      serve | create-owner | invite | reset-password | users | import | doctor
   internal/auth         tokens, argon2id, rate limiter
   internal/config       environment config, media root defaults
   internal/users        users + invites (data/users.json), phone-number usernames
+  internal/shares       public share links (data/shares.json), hashed codes
   internal/media        layout, ids, metadata index, disk free
   internal/probe        ffprobe + MP4 box walker
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
@@ -54,8 +58,16 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
 - **Work on `main`; it is the only branch.** Pushing `main` automatically deploys the GitHub Pages frontend to production. Keep `main` clean and working at all times.
 
 - **Every API route and media byte is authorized server-side.** The SPA's
-  login gate is only a convenience. `/api/health` is the only unauthenticated
-  endpoint, and it returns nothing but `{"ok":true}`.
+  login gate is only a convenience. Only two things work without an account:
+  `/api/health` (`{"ok":true}`, nothing else) and `/api/public/*`, where a
+  share code (`?s=`) unlocks exactly one video.
+- **Public share responses carry nothing about the community**: no video id,
+  file name, uploader, or user. Every failure is the same 404
+  (`share_not_found`) and counts against the caller's guessing budget. A link
+  is live only while it is unexpired, its video is published, and its creator
+  is an active member; check all three per request (`publicShare`).
+- **Public video bytes go through the `publicStreams` cap** so strangers can
+  never starve members' playback. Member routes never take a slot.
 - **No cookies.** The frontend and API are on different sites, so a cookie
   would be third-party and Safari drops it. Sessions are `Authorization:
   Bearer`. `<video>` and poster loads can't send headers, so they carry a
@@ -120,6 +132,9 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
 - **No `window.confirm`/`prompt`/`alert`.** Embedded browsers and some
   installed web apps block them, and a blocked confirm reads as "cancel".
   Use `useDialog` (`src/hooks/useDialog.tsx`).
+- **Feed gestures use physical directions** (right is forward), not RTL
+  mirrored. Seeking fires `canplay`, so anything that auto-plays on it must
+  check `isScrubbing()` first.
 - **Pages scroll themselves.** The layout clips to the viewport, so a
   page's root needs `height: 100%` and `overflow-y: auto`.
 - **Overlays need `createPortal`.** `.navbar` has both a `transform` and a

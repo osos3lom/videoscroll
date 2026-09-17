@@ -6,10 +6,6 @@
 package users
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"os"
 	"sort"
@@ -252,7 +248,7 @@ func (s *Store) create(username, displayName, password string, role Role, mustCh
 	}
 
 	user := User{
-		ID:                 randomID(),
+		ID:                 auth.NewID(),
 		Username:           username,
 		DisplayName:        displayName,
 		Role:               role,
@@ -411,11 +407,11 @@ func (s *Store) CreateInvite(role Role, createdBy string, ttl time.Duration) (st
 	if !role.Valid() {
 		return "", Invite{}, ErrInvalidRole
 	}
-	code := randomCode()
+	code := auth.NewCode()
 	now := time.Now().UTC()
 	invite := Invite{
-		ID:        randomID(),
-		CodeHash:  hashCode(code),
+		ID:        auth.NewID(),
+		CodeHash:  auth.HashCode(code),
 		Role:      role,
 		CreatedBy: createdBy,
 		CreatedAt: now,
@@ -463,7 +459,7 @@ func (s *Store) RedeemInvite(code, username, password string) (User, error) {
 		return User{}, err
 	}
 
-	codeHash := hashCode(strings.TrimSpace(code))
+	codeHash := auth.HashCode(strings.TrimSpace(code))
 	var user User
 	err = s.write(func() error {
 		idx := -1
@@ -483,7 +479,7 @@ func (s *Store) RedeemInvite(code, username, password string) (User, error) {
 
 		now := time.Now().UTC()
 		user = User{
-			ID:           randomID(),
+			ID:           auth.NewID(),
 			Username:     username,
 			DisplayName:  username,
 			Role:         s.data.Invites[idx].Role,
@@ -525,24 +521,6 @@ func (s *Store) activeOwnersExcept(id string) int {
 		}
 	}
 	return n
-}
-
-func randomID() string {
-	b := make([]byte, 12)
-	_, _ = rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-// randomCode is 128 bits, URL-safe.
-func randomCode() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
-}
-
-func hashCode(code string) string {
-	sum := sha256.Sum256([]byte(code))
-	return hex.EncodeToString(sum[:])
 }
 
 func hmacEqual(a, b string) bool {

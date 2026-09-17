@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -84,6 +85,10 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, owner 
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, "could not delete account")
 	default:
+		if err := s.shares.DeleteByUser(id); err != nil {
+			// Harmless: publicShare also requires the creator to exist.
+			slog.Warn("stop share links of deleted account", "err", err)
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

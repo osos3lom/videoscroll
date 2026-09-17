@@ -44,6 +44,10 @@ const MESSAGES: Record<string, string> = {
     upload_invalid: 'حدث خطأ أثناء الرفع. اختر الملف مرة أخرى للمتابعة.',
     upload_offset_mismatch: 'جارٍ استئناف الرفع…',
     invalid_title: 'يجب أن يكون العنوان من 1 إلى 120 حرفاً.',
+
+    share_not_found: 'هذا الرابط غير صالح، أو انتهت صلاحيته، أو أوقفه صاحبه.',
+    not_your_share: 'يمكنك إيقاف روابط المشاركة الخاصة بك فقط.',
+    public_busy: 'يشاهد عدد كبير من الأشخاص الآن. حاول مرة أخرى بعد دقيقة.',
 }
 
 /** The Arabic message for a server error code, if there is one. */

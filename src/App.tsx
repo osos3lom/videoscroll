@@ -10,16 +10,30 @@ import LikesPage from './routes/likes'
 import LoginPage from './routes/login'
 import ProfilePage from './routes/profile'
 import SavedPage from './routes/saved'
+import WatchPage from './routes/watch'
 
 // Owner-only, so kept out of the bundle every member downloads.
 const AdminPage = lazy(() => import('./routes/admin'))
+
+/**
+ * A shared video's public page is outside every gate: it is meant for people
+ * without an account, and members who open a link see the same page.
+ */
+export default function App() {
+    return (
+        <Routes>
+            <Route path="/watch" element={<WatchPage />} />
+            <Route path="*" element={<MemberApp />} />
+        </Routes>
+    )
+}
 
 /**
  * Nothing but the sign-in and join screens is reachable without a session.
  * This is a convenience, not the security boundary: every API route and every
  * media byte is authorized by the server.
  */
-export default function App() {
+function MemberApp() {
     const session = useSession()
 
     // An owner-set temporary password must be replaced before anything else;
