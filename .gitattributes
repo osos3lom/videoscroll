@@ -5,3 +5,4 @@
 # copying them over (instead of cloning there) cannot break bash or systemd.
 *.sh text eol=lf
 deploy/** text eol=lf
+.env.example text eol=lf
