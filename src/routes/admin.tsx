@@ -229,7 +229,7 @@ const AdminPage = () => {
         <div className={styles.page}>
             <header className={styles.header}>
                 <Link to="/profile" className={styles.back}>
-                    الملف الشخصي →
+                    → الملف الشخصي
                 </Link>
                 <h1>المجتمع</h1>
                 <p className={styles.muted}>
@@ -298,7 +298,9 @@ const AdminPage = () => {
                             <li key={user.id} className={user.disabled ? styles.disabled : ''}>
                                 <div className={styles.who}>
                                     <strong>{user.displayName}</strong>
-                                    <span>@{user.username}</span>
+                                    <span>
+                                        <bdi>@{user.username}</bdi>
+                                    </span>
                                     {isSelf && <em> (أنت)</em>}
                                     {user.mustChangePassword && (
                                         <span className={styles.badge}>كلمة مرور مؤقتة</span>
@@ -422,7 +424,7 @@ const AdminPage = () => {
                                 <span>
                                     دعوة بصلاحية <strong>{ROLE_TITLE[inv.role] || inv.role}</strong> ·{' '}
                                     {inv.usedBy
-                                        ? `تم استخدامها بواسطة @${inv.usedBy}`
+                                        ? <>تم استخدامها بواسطة <bdi>@{inv.usedBy}</bdi></>
                                         : expired
                                           ? 'منتهية الصلاحية'
                                           : `تنتهي في ${new Date(inv.expiresAt).toLocaleDateString('ar-SA')}`}

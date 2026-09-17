@@ -102,7 +102,15 @@ const ProfilePage = () => {
 
                 <div className={styles.profileHeader__info}>
                     <h1>{name}</h1>
-                    <p>{user ? `@${user.username} · ${ROLE_LABEL[user.role]}` : 'تسجيل الدخول معطل في الوضع التجريبي'}</p>
+                    <p>
+                        {user ? (
+                            <>
+                                <bdi>@{user.username}</bdi> · {ROLE_LABEL[user.role]}
+                            </>
+                        ) : (
+                            'تسجيل الدخول معطل في الوضع التجريبي'
+                        )}
+                    </p>
                 </div>
 
                 <div className={styles.profileStats}>

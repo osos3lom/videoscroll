@@ -13,7 +13,9 @@ const Footer: FC<IFooterProps> = ({ video }): JSX.Element => {
         <div className={styles.videoFooter}>
             <div className={styles.videoFooter__text}>
                 <h3>
-                    <span>@</span>local
+                    <bdi>
+                        <span>@</span>local
+                    </bdi>
                 </h3>
                 <p>{video.title}</p>
 

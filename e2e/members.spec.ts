@@ -54,7 +54,8 @@ test.describe('community membership', () => {
 
         // The owner's list shows the new member and the invite as used.
         await ownerPage.reload()
-        await expect(ownerPage.getByText(`@${username}`, { exact: true })).toBeVisible()
+        const memberRows = ownerPage.locator('li').filter({ has: ownerPage.getByRole('combobox') })
+        await expect(memberRows.getByText(`@${username}`, { exact: true })).toBeVisible()
         await expect(ownerPage.getByText(`تم استخدامها بواسطة @${username}`)).toBeVisible()
 
         await Promise.all([owner.close(), guest.close(), other.close()])
