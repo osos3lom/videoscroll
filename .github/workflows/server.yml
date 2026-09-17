@@ -56,6 +56,19 @@ jobs:
           path: dist-server/videoscroll
           retention-days: 30
 
+  # A typo in the Caddyfile only shows up when the PC reloads Caddy, which
+  # takes the site down. Catch it here instead.
+  caddy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate deploy/Caddyfile
+        run: >
+          docker run --rm -v "$PWD/deploy:/etc/caddy:ro" caddy:2
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
   # The whole production topology locally (scripts/simulate.mjs): Pages build
   # + Go API on separate origins, driven by real Chrome.
   e2e:

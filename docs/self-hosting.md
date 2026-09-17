@@ -307,7 +307,11 @@ Sign in as the owner → **Profile → Manage community → Add a member**:
 2. Press **Generate** for a temporary password.
 3. Press **Create account**.
 4. **Copy message** and send it privately (WhatsApp, SMS). The message has
-   the sign-in link, their number and the temporary password.
+   the sign-in link, their number and the temporary password. The Arabic
+   [member guide](members.md) is worth sending with it.
+
+Before inviting the first people, run the
+[real-device checklist](acceptance-checklist.md).
 
 At their first sign-in they must choose their own password; until they do,
 the server refuses everything else. **Reset password** on the same page
@@ -434,6 +438,54 @@ over, because the snapshot includes the session secret.
 
 **If the machine is off:** members see "Can't reach the server". Nothing is
 lost, and the app retries on its own.
+
+### Incidents
+
+**The site says it can't reach the server.**
+
+```bash
+systemctl status videoscroll caddy
+journalctl -u videoscroll -u caddy --since "1 hour ago"
+dig +short <name>.duckdns.org; curl -4 -s ifconfig.me   # must match
+```
+
+A mismatched IP means the DuckDNS timer failed: check
+`journalctl -u duckdns-update`. If both services are running and the IP is
+right, test from mobile data. The router may have lost its port forward or
+the PC its DHCP reservation.
+
+**The disk is nearly full.** Uploads already stop with HTTP 507 once free
+space would drop below `MIN_FREE_BYTES`, and streaming keeps working. Delete
+videos from **Profile → All videos**, clear old files from `failed/`, or add
+a disk.
+
+**The disk reports SMART errors** (`smartctl -a` shows reallocated or
+pending sectors that are growing).
+
+1. Stop new uploads: set `MIN_FREE_BYTES` in `/etc/videoscroll.env` above
+   the current free space, then `sudo systemctl restart videoscroll`.
+2. Run the backup by hand and check `last-success`.
+3. Replace the disk, then follow the real restore above.
+
+**An account may be compromised.** On **Manage community**, press
+**Disable** on it: its sessions and video links stop working immediately.
+Then **Reset password** and re-enable it once you have talked to the person.
+If you suspect more than one account, sign **everyone** out by replacing
+the signing key:
+
+```bash
+sudo systemctl stop videoscroll
+sudo mv /srv/videoscroll/data/secret.key /srv/videoscroll/data/secret.key.old
+sudo systemctl start videoscroll     # writes a new key; everyone signs in again
+```
+
+**A frontend deploy is broken.** Revert the commit on `main` and push.
+Faster: delete the `VITE_API_ORIGIN` repository variable and re-run the Pages
+workflow. The site becomes the harmless demo within minutes, and the server
+stays private. If one browser misbehaves because of the service worker,
+run `localStorage.videoscroll_sw = 'off'` in its console and reload.
+
+**A server update is broken.** `sudo ./deploy/install.sh --rollback`.
 
 ---
 

@@ -44,7 +44,9 @@ server/                 Go module
   internal/store        atomic JSON state files
   internal/httpapi      routes, CORS, handlers
 deploy/                 Caddyfile, systemd units, install.sh (+ --rollback), backup.sh + timer, DuckDNS timer
-docs/self-hosting.md    setup and operations guide
+docs/self-hosting.md    setup, operations and incident guide
+docs/members.md         Arabic guide to send to new members
+docs/acceptance-checklist.md  real-phone checks before inviting people
 ```
 
 ## Rules that are load-bearing
