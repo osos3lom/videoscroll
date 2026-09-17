@@ -99,3 +99,25 @@ func TestLimiter(t *testing.T) {
 		t.Error("reset did not clear the window")
 	}
 }
+
+func TestLimiterCountsOnlyFailures(t *testing.T) {
+	l := NewLimiter(2, time.Hour)
+	if l.Blocked("k") {
+		t.Fatal("fresh key is blocked")
+	}
+	l.Fail("k")
+	if l.Blocked("k") {
+		t.Fatal("blocked after one failure of two")
+	}
+	l.Fail("k")
+	if !l.Blocked("k") {
+		t.Fatal("not blocked after reaching the limit")
+	}
+	if l.Blocked("other") {
+		t.Error("keys are not independent")
+	}
+	l.Reset("k")
+	if l.Blocked("k") {
+		t.Error("reset did not clear the failures")
+	}
+}

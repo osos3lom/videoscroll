@@ -308,3 +308,44 @@ func TestLoginRateLimit(t *testing.T) {
 		t.Errorf("after 12 bad logins status = %d, want 429", last)
 	}
 }
+
+func TestStrangerCannotLockOwnerOut(t *testing.T) {
+	f := newFixture(t)
+	wrong := map[string]string{"username": "owner", "password": "guessing-guessing"}
+	right := map[string]string{"username": "owner", "password": "owner-password-1"}
+
+	var last int
+	for range 30 {
+		last = f.do("POST", "/api/auth/login", wrong, from("203.0.113.9:4000")).Code
+	}
+	if last != http.StatusTooManyRequests {
+		t.Fatalf("attacker after 30 failures = %d, want 429", last)
+	}
+
+	// The owner, from their own address, is unaffected.
+	if code := f.do("POST", "/api/auth/login", right, from("198.51.100.7:5000")).Code; code != http.StatusOK {
+		t.Errorf("owner login from another address = %d, want 200", code)
+	}
+}
+
+func TestSuccessfulLoginsAreNotCounted(t *testing.T) {
+	f := newFixture(t)
+	right := map[string]string{"username": "viewer", "password": "viewer-password-1"}
+	for i := range 30 {
+		if code := f.do("POST", "/api/auth/login", right, from("198.51.100.7:5000")).Code; code != http.StatusOK {
+			t.Fatalf("login %d = %d, want 200", i+1, code)
+		}
+	}
+}
+
+func TestPasswordChangeGuessesAreLimited(t *testing.T) {
+	f := newFixture(t)
+	body := map[string]string{"currentPassword": "not-it-at-all", "newPassword": "brand-new-password"}
+	var last int
+	for range 12 {
+		last = f.do("POST", "/api/auth/password", body, f.session(f.viewer)).Code
+	}
+	if last != http.StatusTooManyRequests {
+		t.Errorf("after 12 wrong current passwords = %d, want 429", last)
+	}
+}
