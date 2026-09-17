@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -47,20 +46,24 @@ type User struct {
 	Ver       int       `json:"ver"`
 	Disabled  bool      `json:"disabled"`
 	CreatedAt time.Time `json:"createdAt"`
+	// Set when the owner chose the password (a new account or a reset).
+	// Until the person picks their own, the API only lets them change it.
+	MustChangePassword bool `json:"mustChangePassword,omitempty"`
 }
 
 // Public is the shape sent to clients: never the hash, never the version.
 type Public struct {
-	ID          string    `json:"id"`
-	Username    string    `json:"username"`
-	DisplayName string    `json:"displayName"`
-	Role        Role      `json:"role"`
-	Disabled    bool      `json:"disabled"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID                 string    `json:"id"`
+	Username           string    `json:"username"`
+	DisplayName        string    `json:"displayName"`
+	Role               Role      `json:"role"`
+	Disabled           bool      `json:"disabled"`
+	CreatedAt          time.Time `json:"createdAt"`
+	MustChangePassword bool      `json:"mustChangePassword,omitempty"`
 }
 
 func (u User) Public() Public {
-	return Public{u.ID, u.Username, u.DisplayName, u.Role, u.Disabled, u.CreatedAt}
+	return Public{u.ID, u.Username, u.DisplayName, u.Role, u.Disabled, u.CreatedAt, u.MustChangePassword}
 }
 
 type Invite struct {
@@ -77,16 +80,14 @@ type Invite struct {
 }
 
 var (
-	ErrNotFound        = errors.New("not found")
-	ErrUsernameTaken   = errors.New("that username is taken")
-	ErrInvalidUsername = errors.New("username must be 3-32 characters: letters, digits, dot, dash or underscore")
-	ErrWeakPassword    = errors.New("password must be at least 10 characters")
-	ErrInvalidRole     = errors.New("invalid role")
-	ErrInviteInvalid   = errors.New("this invite is invalid, expired, or already used")
-	ErrLastOwner       = errors.New("the community must keep at least one active owner")
+	ErrNotFound      = errors.New("not found")
+	ErrUsernameTaken = errors.New("an account with that phone number or username already exists")
+	ErrWeakPassword  = errors.New("password must be at least 10 characters")
+	ErrDisplayName   = errors.New("name must be 1-48 characters")
+	ErrInvalidRole   = errors.New("invalid role")
+	ErrInviteInvalid = errors.New("this invite is invalid, expired, or already used")
+	ErrLastOwner     = errors.New("the community must keep at least one active owner")
 )
-
-var usernamePattern = regexp.MustCompile(`^[a-z0-9_.-]{3,32}$`)
 
 type fileData struct {
 	Users   []User   `json:"users"`
@@ -215,15 +216,29 @@ func (s *Store) HasOwner() bool {
 	return has
 }
 
-func NormalizeUsername(username string) string {
-	return strings.ToLower(strings.TrimSpace(username))
+// Create adds a user who chose their own password (the CLI's create-owner).
+func (s *Store) Create(username, password string, role Role) (User, error) {
+	return s.create(username, "", password, role, false)
 }
 
-// Create adds a user. Hashing happens before taking the lock.
-func (s *Store) Create(username, password string, role Role) (User, error) {
+// CreateMember adds an account set up by the owner. The password is
+// temporary: the person must replace it when they first sign in.
+func (s *Store) CreateMember(username, displayName, password string, role Role) (User, error) {
+	return s.create(username, displayName, password, role, true)
+}
+
+// create validates and adds a user. Hashing happens before taking the lock.
+func (s *Store) create(username, displayName, password string, role Role, mustChange bool) (User, error) {
 	username = NormalizeUsername(username)
-	if !usernamePattern.MatchString(username) {
-		return User{}, ErrInvalidUsername
+	if err := ValidateUsername(username); err != nil {
+		return User{}, err
+	}
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		displayName = username
+	}
+	if len([]rune(displayName)) > 48 {
+		return User{}, ErrDisplayName
 	}
 	if !role.Valid() {
 		return User{}, ErrInvalidRole
@@ -237,13 +252,14 @@ func (s *Store) Create(username, password string, role Role) (User, error) {
 	}
 
 	user := User{
-		ID:           randomID(),
-		Username:     username,
-		DisplayName:  username,
-		Role:         role,
-		PasswordHash: hash,
-		Ver:          1,
-		CreatedAt:    time.Now().UTC(),
+		ID:                 randomID(),
+		Username:           username,
+		DisplayName:        displayName,
+		Role:               role,
+		PasswordHash:       hash,
+		Ver:                1,
+		CreatedAt:          time.Now().UTC(),
+		MustChangePassword: mustChange,
 	}
 	err = s.write(func() error {
 		if s.indexByUsername(username) >= 0 {
@@ -281,7 +297,43 @@ func (s *Store) SetPassword(id, password string) (User, error) {
 	}
 	return s.mutate(id, func(u *User) error {
 		u.PasswordHash = hash
+		u.MustChangePassword = false
 		u.Ver++
+		return nil
+	})
+}
+
+// SetTemporaryPassword is the owner's password reset: it signs the person out
+// everywhere and makes them choose a new password at their next sign-in.
+func (s *Store) SetTemporaryPassword(id, password string) (User, error) {
+	if len(password) < auth.MinPasswordLength {
+		return User{}, ErrWeakPassword
+	}
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return User{}, err
+	}
+	return s.mutate(id, func(u *User) error {
+		u.PasswordHash = hash
+		u.MustChangePassword = true
+		u.Ver++
+		return nil
+	})
+}
+
+// Delete removes an account. Their videos stay; the last active owner
+// cannot be deleted.
+func (s *Store) Delete(id string) error {
+	return s.write(func() error {
+		i := s.indexByID(id)
+		if i < 0 {
+			return ErrNotFound
+		}
+		u := s.data.Users[i]
+		if u.Role == RoleOwner && !u.Disabled && s.activeOwnersExcept(u.ID) == 0 {
+			return ErrLastOwner
+		}
+		s.data.Users = append(s.data.Users[:i], s.data.Users[i+1:]...)
 		return nil
 	})
 }
@@ -324,8 +376,8 @@ func (s *Store) Update(id string, patch Patch) (User, error) {
 		}
 		if patch.DisplayName != nil {
 			name := strings.TrimSpace(*patch.DisplayName)
-			if name == "" || len(name) > 48 {
-				return errors.New("display name must be 1-48 characters")
+			if name == "" || len([]rune(name)) > 48 {
+				return ErrDisplayName
 			}
 			u.DisplayName = name
 		}
@@ -400,8 +452,8 @@ func (s *Store) DeleteInvite(id string) error {
 // RedeemInvite creates the account and consumes the invite atomically.
 func (s *Store) RedeemInvite(code, username, password string) (User, error) {
 	username = NormalizeUsername(username)
-	if !usernamePattern.MatchString(username) {
-		return User{}, ErrInvalidUsername
+	if err := ValidateUsername(username); err != nil {
+		return User{}, err
 	}
 	if len(password) < auth.MinPasswordLength {
 		return User{}, ErrWeakPassword

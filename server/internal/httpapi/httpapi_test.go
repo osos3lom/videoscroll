@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -162,6 +163,11 @@ func TestLoginAndVideoList(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &list)
 	if list.MediaToken == "" || list.User.Username != "viewer" {
 		t.Fatalf("videos body = %s", rec.Body)
+	}
+	// The fixture's index is empty. That must be [], not null: the app maps
+	// over it, and null blanked the whole page on a fresh install.
+	if !strings.Contains(rec.Body.String(), `"data":[]`) {
+		t.Errorf("empty video list not serialized as []: %s", rec.Body)
 	}
 }
 
@@ -347,5 +353,174 @@ func TestPasswordChangeGuessesAreLimited(t *testing.T) {
 	}
 	if last != http.StatusTooManyRequests {
 		t.Errorf("after 12 wrong current passwords = %d, want 429", last)
+	}
+}
+
+func TestOwnerCreatesPhoneMemberWhoMustChangePassword(t *testing.T) {
+	f := newFixture(t)
+	owner := f.session(f.owner)
+
+	body := map[string]string{"username": "050 123 4567", "displayName": "Ahmed", "password": "temporary-pass-1", "role": "uploader"}
+	if rec := f.do("POST", "/api/admin/users", body, f.session(f.viewer)); rec.Code != http.StatusForbidden {
+		t.Errorf("viewer creating accounts = %d", rec.Code)
+	}
+	rec := f.do("POST", "/api/admin/users", body, owner)
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"+966501234567"`) {
+		t.Fatalf("create = %d %s", rec.Code, rec.Body)
+	}
+	if rec := f.do("POST", "/api/admin/users", body, owner); rec.Code != http.StatusConflict {
+		t.Errorf("duplicate = %d", rec.Code)
+	}
+	bad := map[string]string{"username": "12345", "password": "temporary-pass-1", "role": "viewer"}
+	if rec := f.do("POST", "/api/admin/users", bad, owner); rec.Code != http.StatusBadRequest {
+		t.Errorf("bad phone = %d", rec.Code)
+	}
+
+	// Signs in with another way of writing the number.
+	rec = f.do("POST", "/api/auth/login", map[string]string{"username": "+966 50 123 4567", "password": "temporary-pass-1"}, nil)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"mustChangePassword":true`) {
+		t.Fatalf("login = %d %s", rec.Code, rec.Body)
+	}
+	var session struct{ Token string }
+	_ = json.Unmarshal(rec.Body.Bytes(), &session)
+	auth := map[string]string{"Authorization": "Bearer " + session.Token}
+
+	// Until the password is changed, only the password routes work.
+	rec = f.do("GET", "/api/videos", nil, auth)
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), codePasswordChangeRequired) {
+		t.Errorf("videos while pending = %d %s", rec.Code, rec.Body)
+	}
+	if rec := f.do("GET", "/api/auth/me", nil, auth); rec.Code != http.StatusOK {
+		t.Errorf("me while pending = %d", rec.Code)
+	}
+	member, _ := f.users.ByUsername("0501234567")
+	mediaTarget, _ := f.mediaURL(member, "")
+	if rec := f.do("GET", mediaTarget, nil, nil); rec.Code != http.StatusUnauthorized {
+		t.Errorf("media while pending = %d", rec.Code)
+	}
+
+	same := map[string]string{"currentPassword": "temporary-pass-1", "newPassword": "temporary-pass-1"}
+	if rec := f.do("POST", "/api/auth/password", same, auth); rec.Code != http.StatusBadRequest {
+		t.Errorf("reusing the temporary password = %d", rec.Code)
+	}
+	change := map[string]string{"currentPassword": "temporary-pass-1", "newPassword": "ahmeds-own-password"}
+	rec = f.do("POST", "/api/auth/password", change, auth)
+	if rec.Code != http.StatusOK || strings.Contains(rec.Body.String(), "mustChangePassword") {
+		t.Fatalf("change = %d %s", rec.Code, rec.Body)
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &session)
+	if rec := f.do("GET", "/api/videos", nil, map[string]string{"Authorization": "Bearer " + session.Token}); rec.Code != http.StatusOK {
+		t.Errorf("videos after change = %d", rec.Code)
+	}
+}
+
+func TestOwnerResetsPasswordAndDeletesMembers(t *testing.T) {
+	f := newFixture(t)
+	owner := f.session(f.owner)
+	viewerSession := f.session(f.viewer)
+
+	reset := map[string]string{"password": "fresh-temp-pass"}
+	if rec := f.do("POST", "/api/admin/users/"+f.owner.ID+"/password", reset, owner); rec.Code != http.StatusBadRequest {
+		t.Errorf("owner resetting own password here = %d", rec.Code)
+	}
+	if rec := f.do("POST", "/api/admin/users/"+f.viewer.ID+"/password", reset, owner); rec.Code != http.StatusOK {
+		t.Fatalf("reset = %d %s", rec.Code, rec.Body)
+	}
+	if rec := f.do("GET", "/api/videos", nil, viewerSession); rec.Code != http.StatusUnauthorized {
+		t.Errorf("old session after reset = %d", rec.Code)
+	}
+	login := map[string]string{"username": "viewer", "password": "fresh-temp-pass"}
+	if rec := f.do("POST", "/api/auth/login", login, nil); !strings.Contains(rec.Body.String(), `"mustChangePassword":true`) {
+		t.Errorf("login after reset = %s", rec.Body)
+	}
+
+	if rec := f.do("DELETE", "/api/admin/users/"+f.owner.ID, nil, owner); rec.Code != http.StatusBadRequest {
+		t.Errorf("deleting yourself = %d", rec.Code)
+	}
+	if rec := f.do("DELETE", "/api/admin/users/"+f.viewer.ID, nil, owner); rec.Code != http.StatusNoContent {
+		t.Fatalf("delete = %d %s", rec.Code, rec.Body)
+	}
+	if rec := f.do("POST", "/api/auth/login", login, nil); rec.Code != http.StatusUnauthorized {
+		t.Errorf("deleted member login = %d", rec.Code)
+	}
+}
+
+func TestRenameVideoPermissions(t *testing.T) {
+	f := newFixture(t)
+	uploader, err := f.users.Create("uploader", "uploader-password", users.RoleUploader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, _ := f.users.Create("other-uploader", "uploader-password", users.RoleUploader)
+
+	id := media.VideoID("clip.mp4")
+	f.index.Add(media.Meta{VideoID: id, FileName: "clip.mp4", Title: "clip", UploaderID: uploader.ID})
+	target := "/api/videos/" + id
+
+	cases := []struct {
+		name   string
+		user   users.User
+		title  string
+		status int
+	}{
+		{"viewer", f.viewer, "nope", http.StatusForbidden},
+		{"another uploader", other, "nope", http.StatusForbidden},
+		{"the uploader", uploader, "Beach day", http.StatusOK},
+		{"empty title", uploader, "   ", http.StatusBadRequest},
+		{"the owner", f.owner, "Beach day, 2026", http.StatusOK},
+	}
+	for _, tc := range cases {
+		rec := f.do("PATCH", target, map[string]string{"title": tc.title}, f.session(tc.user))
+		if rec.Code != tc.status {
+			t.Errorf("%s: status %d, want %d (%s)", tc.name, rec.Code, tc.status, rec.Body)
+		}
+	}
+
+	meta, _ := f.index.Get(id)
+	if meta.Title != "Beach day, 2026" || meta.FileName != "clip.mp4" {
+		t.Errorf("meta after rename = %+v", meta)
+	}
+	var onDisk media.Meta
+	data, _ := os.ReadFile(f.index.MetaPath(id))
+	_ = json.Unmarshal(data, &onDisk)
+	if onDisk.Title != "Beach day, 2026" {
+		t.Errorf("title not persisted: %+v", onDisk)
+	}
+
+	// The owner can delete any video.
+	if rec := f.do("DELETE", target, nil, f.session(f.owner)); rec.Code != http.StatusNoContent {
+		t.Errorf("owner delete = %d", rec.Code)
+	}
+}
+
+// Every message the handlers send must have a stable code the app can
+// translate, so a new English message cannot silently reach Arabic users.
+func TestEveryErrorMessageHasACode(t *testing.T) {
+	sources, _ := filepath.Glob("*.go")
+	literal := regexp.MustCompile(`writeError\(w, [^,]+, "([^"]+)"\)`)
+	for _, file := range sources {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range literal.FindAllStringSubmatch(string(data), -1) {
+			if _, ok := errorCodes[m[1]]; !ok {
+				t.Errorf("%s: message %q has no entry in errorCodes", file, m[1])
+			}
+		}
+	}
+
+	f := newFixture(t)
+	rec := f.do("POST", "/api/auth/login", map[string]string{"username": "viewer", "password": "wrong-password-1"}, nil)
+	if !strings.Contains(rec.Body.String(), `"code":"invalid_credentials"`) {
+		t.Errorf("login failure body = %s", rec.Body)
+	}
+	bad := map[string]string{"username": "12345", "password": "temporary-pass-1", "role": "viewer"}
+	rec = f.do("POST", "/api/admin/users", bad, f.session(f.owner))
+	if !strings.Contains(rec.Body.String(), `"code":"invalid_phone"`) {
+		t.Errorf("bad phone body = %s", rec.Body)
 	}
 }

@@ -22,7 +22,8 @@ History: this was Next.js, then Vite + Express, now Vite + Go. References to
 index.html              app shell (static meta)
 vite.config.mts         webmanifest, CSP meta, demo clips, sw.js build
 src/                    browser only
-  App.tsx               auth gate + routes (login, join, feed, likes, saved, profile, admin)
+  App.tsx               auth gate + routes (login, join, choose-password, feed, likes, saved, profile, admin)
+  lib/accounts.ts       phone display, temporary passwords, the "your account" message
   types/api.ts          hand-mirrored Go wire types
   lib/apiUrl.ts         the single source of URL composition
   lib/session.ts        bearer token + apiFetch (401 → sign out + wipe cache)
@@ -33,7 +34,7 @@ src/                    browser only
 server/                 Go module
   cmd/videoscroll/      serve | create-owner | invite | reset-password | users | import | doctor
   internal/auth         tokens, argon2id, rate limiter
-  internal/users        users + invites (data/users.json)
+  internal/users        users + invites (data/users.json), phone-number usernames
   internal/media        layout, ids, metadata index, disk free
   internal/probe        ffprobe + MP4 box walker
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
@@ -53,6 +54,15 @@ docs/self-hosting.md    setup and operations guide
   Bearer`. `<video>` and poster loads can't send headers, so they carry a
   **media-scoped** token as `?t=`. A media token must never be accepted as a
   session token (`auth.Scope`).
+- **Usernames are phone numbers or handles.** Always pass input through
+  `users.NormalizeUsername` before lookup or storage: it turns every usual
+  way of writing a number into E.164, with local numbers read as Saudi
+  (+966). `users.ValidateUsername` checks the result.
+- **Owner-set passwords are temporary** (`User.MustChangePassword`).
+  `requireUser` answers 403 `{"code":"password_change_required"}`, and only
+  routes wrapped in `requireSession` (me, password, logout-all) work until
+  the person picks their own. The app then shows only `ChoosePasswordPage`.
+  New routes that do anything real must use `requireUser`.
 - **Tokens embed the user's `ver`.** Revocation is `ver++`: password change,
   role change, disable, and "sign out everywhere" all do it. Any new
   privilege-affecting mutation must bump it too.

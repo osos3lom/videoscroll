@@ -73,7 +73,7 @@ function webmanifest(): Plugin {
                     {
                         name: 'VideoScroll',
                         short_name: 'VideoScroll',
-                        description: 'A private video community',
+                        description: 'مجتمع فيديو خاص',
                         theme_color: '#000000',
                         background_color: '#000000',
                         display: 'standalone',

@@ -5,7 +5,7 @@ import { useVideos } from '../hooks/useVideos'
 import styles from './sharedGrid.module.css'
 
 const SavedPage = () => {
-    useDocumentTitle('Saved Videos - VideoScroll')
+    useDocumentTitle('المقاطع المحفوظة - VideoScroll')
 
     const { videos, social: serverSocial } = useVideos()
     const [social] = useSocialStorage(serverSocial)
@@ -15,9 +15,9 @@ const SavedPage = () => {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <h1 className={styles.header__title}>Saved Videos</h1>
+                <h1 className={styles.header__title}>المقاطع المحفوظة</h1>
                 <p className={styles.header__subtitle}>
-                    Browse reels that you have bookmarked ({savedVideos.length})
+                    تصفح المقاطع التي قمت بحفظها ({savedVideos.length})
                 </p>
             </header>
 
@@ -30,8 +30,8 @@ const SavedPage = () => {
                     </div>
                 ) : (
                     <div className={styles.empty}>
-                        <h2>No saved videos yet</h2>
-                        <p>Go to the feed and click the bookmark icon to save your favorite clips!</p>
+                        <h2>لا توجد مقاطع محفوظة بعد</h2>
+                        <p>انتقل إلى الفيديوهات واضغط على رمز الإشارة المرجعية لحفظ مقاطعك المفضلة!</p>
                     </div>
                 )}
             </main>

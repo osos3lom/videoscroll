@@ -17,6 +17,89 @@ func (s *Server) handleListUsers(w http.ResponseWriter, _ *http.Request, _ users
 	writeJSON(w, http.StatusOK, map[string]any{"users": out})
 }
 
+// handleCreateUser is the owner setting up an account directly, with a
+// temporary password the person must change at their first sign-in.
+func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request, _ users.User) {
+	var body struct {
+		Username    string     `json:"username"`
+		DisplayName string     `json:"displayName"`
+		Password    string     `json:"password"`
+		Role        users.Role `json:"role"`
+	}
+	if !readJSON(w, r, &body) {
+		return
+	}
+	user, err := s.users.CreateMember(body.Username, body.DisplayName, body.Password, body.Role)
+	switch {
+	case errors.Is(err, users.ErrUsernameTaken):
+		writeError(w, http.StatusConflict, err.Error())
+	case err != nil && isUserInputError(err):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not create account")
+	default:
+		writeJSON(w, http.StatusCreated, map[string]any{"user": user.Public()})
+	}
+}
+
+// handleResetPassword sets a new temporary password: the person is signed
+// out everywhere and must choose their own at the next sign-in.
+func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request, owner users.User) {
+	var body struct {
+		Password string `json:"password"`
+	}
+	if !readJSON(w, r, &body) {
+		return
+	}
+	id := r.PathValue("id")
+	if id == owner.ID {
+		writeError(w, http.StatusBadRequest, "change your own password from your profile")
+		return
+	}
+	user, err := s.users.SetTemporaryPassword(id, body.Password)
+	switch {
+	case errors.Is(err, users.ErrNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	case errors.Is(err, users.ErrWeakPassword):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not reset password")
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"user": user.Public()})
+	}
+}
+
+func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, owner users.User) {
+	id := r.PathValue("id")
+	if id == owner.ID {
+		writeError(w, http.StatusBadRequest, "you cannot delete your own account")
+		return
+	}
+	err := s.users.Delete(id)
+	switch {
+	case errors.Is(err, users.ErrNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	case errors.Is(err, users.ErrLastOwner):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not delete account")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func isUserInputError(err error) bool {
+	for _, known := range []error{
+		users.ErrInvalidUsername, users.ErrInvalidPhone, users.ErrWeakPassword,
+		users.ErrInvalidRole, users.ErrDisplayName,
+	} {
+		if errors.Is(err, known) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request, _ users.User) {
 	var patch users.Patch
 	if !readJSON(w, r, &patch) {

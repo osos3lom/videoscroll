@@ -45,11 +45,11 @@ const Upload: FC = (): JSX.Element => {
                 const status = await getUploadStatus(uploadId, signal)
                 if (status.state === 'ready') {
                     window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
-                    setPhase({ kind: 'done', message: `“${fileName}” is live` })
+                    setPhase({ kind: 'done', message: `“${fileName}” تم النشر بنجاح` })
                     return
                 }
                 if (status.state === 'failed') {
-                    setPhase({ kind: 'error', message: status.error ?? 'Processing failed' })
+                    setPhase({ kind: 'error', message: status.error ?? 'فشلت معالجة الفيديو' })
                     return
                 }
             } catch (error) {
@@ -90,21 +90,21 @@ const Upload: FC = (): JSX.Element => {
 
             if (status.state === 'ready') {
                 window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
-                setPhase({ kind: 'done', message: 'That video is already uploaded' })
+                setPhase({ kind: 'done', message: 'تم رفع هذا الفيديو مسبقاً' })
                 return
             }
             if (status.state === 'failed') {
-                setPhase({ kind: 'error', message: status.error ?? 'Processing failed' })
+                setPhase({ kind: 'error', message: status.error ?? 'فشلت معالجة الفيديو' })
                 return
             }
             await waitForProcessing(status.uploadId, file.name, controller.signal)
         } catch (error) {
             if (controller.signal.aborted) return
             const message =
-                error instanceof ApiError || error instanceof Error ? error.message : 'Upload failed'
+                error instanceof ApiError || error instanceof Error ? error.message : 'فشل الرفع'
             setPhase({
                 kind: 'error',
-                message: `${message}. Pick the same file again to resume.`,
+                message: `${message}. اختر نفس الملف مجدداً لاستئناف الرفع.`,
             })
         }
     }
@@ -124,7 +124,7 @@ const Upload: FC = (): JSX.Element => {
                 type="button"
                 className={styles.addButton}
                 onClick={() => !busy && inputRef.current?.click()}
-                aria-label="Upload video"
+                aria-label="رفع فيديو"
                 disabled={busy}
             >
                 <div className={styles.addIconWrapper}>
@@ -155,8 +155,8 @@ const Upload: FC = (): JSX.Element => {
                         )}
                         <span>
                             {phase.kind === 'uploading' &&
-                                `${phase.resumed ? 'Resuming' : 'Uploading'}… ${phase.percent}%`}
-                            {phase.kind === 'processing' && 'Processing on the server…'}
+                                `${phase.resumed ? 'استئناف الرفع' : 'جارٍ الرفع'}… ${phase.percent}%`}
+                            {phase.kind === 'processing' && 'جارٍ المعالجة على الخادم…'}
                             {(phase.kind === 'done' || phase.kind === 'error') && phase.message}
                         </span>
                         {phase.kind === 'uploading' && (
@@ -165,7 +165,7 @@ const Upload: FC = (): JSX.Element => {
                                     type="button"
                                     className={styles.toast__cancel}
                                     onClick={cancel}
-                                    aria-label="Cancel upload"
+                                    aria-label="إلغاء الرفع"
                                 >
                                     <MdClose size={16} />
                                 </button>

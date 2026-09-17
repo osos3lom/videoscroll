@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import Layout from './components/layout'
 import { useSession } from './hooks/useSession'
 import { IS_DEMO } from './lib/apiUrl'
+import ChoosePasswordPage from './routes/choosePassword'
 import FeedPage from './routes/feed'
 import JoinPage from './routes/join'
 import LikesPage from './routes/likes'
@@ -20,6 +21,12 @@ const AdminPage = lazy(() => import('./routes/admin'))
  */
 export default function App() {
     const session = useSession()
+
+    // An owner-set temporary password must be replaced before anything else;
+    // the server refuses every other request until then.
+    if (!IS_DEMO && session?.user.mustChangePassword) {
+        return <ChoosePasswordPage />
+    }
 
     if (!IS_DEMO && !session) {
         return (

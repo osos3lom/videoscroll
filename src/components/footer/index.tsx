@@ -23,7 +23,7 @@ const Footer: FC<IFooterProps> = ({ video }): JSX.Element => {
                         gradient={false}
                         pauseOnHover={true}
                         speed={40}
-                        style={{ maxWidth: '40%', marginLeft: '10px' }}
+                        style={{ maxWidth: '40%', marginInlineStart: '10px' }}
                     >
                         <p>{video.fileName}</p>
                     </Marquee>

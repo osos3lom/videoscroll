@@ -32,52 +32,52 @@ const Navbar: FC<INavbarProps> = ({ uploadSlot = null }): JSX.Element => {
         <nav className={styles.navbar}>
             <div className={styles.navbar__container}>
                 {/* Feed Tab */}
-                <Link to="/" className={styles.navbar__item} aria-label="Feed">
+                <Link to="/" className={styles.navbar__item} aria-label="الرئيسية">
                     {isFeedActive ? (
                         <MdHome size={28} className={styles.navbar__icon_active} />
                     ) : (
                         <MdOutlineHome size={28} className={styles.navbar__icon} />
                     )}
                     <span className={`${styles.navbar__label} ${isFeedActive ? styles.navbar__label_active : ''}`}>
-                        Feed
+                        الرئيسية
                     </span>
                 </Link>
 
                 {/* Likes Tab */}
-                <Link to="/likes" className={styles.navbar__item} aria-label="Likes">
+                <Link to="/likes" className={styles.navbar__item} aria-label="الإعجابات">
                     {isLikesActive ? (
                         <MdFavorite size={26} className={styles.navbar__icon_active} />
                     ) : (
                         <MdFavoriteBorder size={26} className={styles.navbar__icon} />
                     )}
                     <span className={`${styles.navbar__label} ${isLikesActive ? styles.navbar__label_active : ''}`}>
-                        Likes
+                        الإعجابات
                     </span>
                 </Link>
 
                 {uploadSlot}
 
                 {/* Saved Tab */}
-                <Link to="/saved" className={styles.navbar__item} aria-label="Saved">
+                <Link to="/saved" className={styles.navbar__item} aria-label="المحفوظات">
                     {isSavedActive ? (
                         <MdBookmark size={26} className={styles.navbar__icon_active} />
                     ) : (
                         <MdBookmarkBorder size={26} className={styles.navbar__icon} />
                     )}
                     <span className={`${styles.navbar__label} ${isSavedActive ? styles.navbar__label_active : ''}`}>
-                        Saved
+                        المحفوظات
                     </span>
                 </Link>
 
                 {/* Profile Tab */}
-                <Link to="/profile" className={styles.navbar__item} aria-label="Profile">
+                <Link to="/profile" className={styles.navbar__item} aria-label="حسابي">
                     {isProfileActive ? (
                         <MdPerson size={26} className={styles.navbar__icon_active} />
                     ) : (
                         <MdOutlinePerson size={26} className={styles.navbar__icon} />
                     )}
                     <span className={`${styles.navbar__label} ${isProfileActive ? styles.navbar__label_active : ''}`}>
-                        Profile
+                        حسابي
                     </span>
                 </Link>
             </div>

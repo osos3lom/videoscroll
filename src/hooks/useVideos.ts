@@ -54,7 +54,8 @@ export function useVideos(): UseVideosResult {
     const videos = useMemo<LocalVideo[]>(() => {
         if (IS_DEMO) return DEMO_VIDEOS
         if (!data) return []
-        return data.data.map((meta) => ({
+        // Older servers sent `null` for an empty community.
+        return (data.data ?? []).map((meta) => ({
             ...meta,
             src: videoSrc(meta.videoId, data.mediaToken),
             poster: posterUrl(meta.videoId, data.mediaToken),

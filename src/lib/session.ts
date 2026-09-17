@@ -1,5 +1,6 @@
 import type { PublicUser, SessionResponse } from '../types/api'
 import { apiUrl } from './apiUrl'
+import { messageForCode } from './errorMessages'
 import { clearMediaCache } from './mediaCache/chunkStore'
 
 /**
@@ -71,7 +72,12 @@ export function setSession(response: SessionResponse): void {
 export function updateSessionUser(user: PublicUser): void {
     if (!current) return
     const u = current.user
-    if (u.role === user.role && u.displayName === user.displayName && u.username === user.username) {
+    if (
+        u.role === user.role &&
+        u.displayName === user.displayName &&
+        u.username === user.username &&
+        Boolean(u.mustChangePassword) === Boolean(user.mustChangePassword)
+    ) {
         return
     }
     setSession({ ...current, user })
@@ -140,7 +146,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
         })
     } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') throw error
-        throw new ApiError(0, 'Could not reach the server')
+        throw new ApiError(0, messageForCode('network_error') ?? 'Could not reach the server', { code: 'network_error' })
     }
 
     if (response.status === 204) return undefined as T
@@ -148,7 +154,15 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     const data = (await response.json().catch(() => ({}))) as Record<string, unknown>
     if (!response.ok) {
         if (response.status === 401 && token) clearSession()
-        const message = typeof data.error === 'string' ? data.error : `Request failed (${response.status})`
+        // The owner reset this password while the app was open: switch to the
+        // "choose your password" screen.
+        if (response.status === 403 && data.code === 'password_change_required' && current) {
+            updateSessionUser({ ...current.user, mustChangePassword: true })
+        }
+        // Prefer the app's translation of the server's error code.
+        const message =
+            messageForCode(data.code) ??
+            (typeof data.error === 'string' ? data.error : `Request failed (${response.status})`)
         throw new ApiError(response.status, message, data)
     }
     return data as T

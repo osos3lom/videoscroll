@@ -78,7 +78,8 @@ func (s *Server) handleJoin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, users.ErrUsernameTaken):
 		writeError(w, http.StatusConflict, err.Error())
-	case errors.Is(err, users.ErrInvalidUsername), errors.Is(err, users.ErrWeakPassword):
+	case errors.Is(err, users.ErrInvalidUsername), errors.Is(err, users.ErrInvalidPhone),
+		errors.Is(err, users.ErrWeakPassword):
 		writeError(w, http.StatusBadRequest, err.Error())
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, "could not create account")
@@ -138,6 +139,10 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request, us
 		return
 	}
 	s.loginByPair.Reset(pwKey)
+	if auth.VerifyPassword(body.NewPassword, user.PasswordHash) {
+		writeError(w, http.StatusBadRequest, "choose a password different from the current one")
+		return
+	}
 	updated, err := s.users.SetPassword(user.ID, body.NewPassword)
 	if errors.Is(err, users.ErrWeakPassword) {
 		writeError(w, http.StatusBadRequest, err.Error())

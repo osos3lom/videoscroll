@@ -37,7 +37,7 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizonta
                 type="button"
                 className={styles.sidebar__button}
                 onClick={handleLike}
-                aria-label={hasLiked ? 'Unlike video' : 'Like video'}
+                aria-label={hasLiked ? 'إلغاء الإعجاب' : 'إعجاب'}
             >
                 <MdFavorite
                     size={40}
@@ -51,7 +51,7 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizonta
                 type="button"
                 className={styles.sidebar__button}
                 onClick={handleBookmark}
-                aria-label={hasBookmarked ? 'Remove bookmark' : 'Bookmark video'}
+                aria-label={hasBookmarked ? 'إزالة من المحفوظات' : 'حفظ الفيديو'}
             >
                 <MdOutlineBookmark
                     size={40}
@@ -65,7 +65,7 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizonta
                 type="button"
                 className={styles.sidebar__button}
                 onClick={() => onShare(video.title)}
-                aria-label="Share video"
+                aria-label="مشاركة الفيديو"
             >
                 <RiShareForwardFill size={40} />
             </button>

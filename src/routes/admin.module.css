@@ -149,3 +149,81 @@
     background: rgba(214, 80, 118, 0.25);
     color: #ffb3c7;
 }
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 1.5rem;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #01feff;
+}
+
+/* Side by side with a button (the password + Generate row): share the width.
+   Only here — in the vertical form a flex basis would become a height. */
+.row > .input {
+    flex: 1 1 180px;
+    width: auto;
+}
+
+.inlineHelp {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1.2rem;
+}
+
+.who {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.who span {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255, 184, 107, 0.15);
+    color: #ffb86b !important;
+    font-size: 1.1rem;
+}
+
+.page button.danger {
+    border-color: rgba(255, 122, 156, 0.5);
+    color: #ff7a9c;
+}
+
+.shareBox {
+    margin-bottom: 20px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(1, 254, 255, 0.08);
+    border: 1px solid rgba(1, 254, 255, 0.35);
+}
+
+.shareBox pre {
+    margin: 0 0 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: 1.35rem;
+    line-height: 1.5;
+}

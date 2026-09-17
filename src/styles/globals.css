@@ -8,6 +8,9 @@
 *:focus {
     outline: none;
 }
+html {
+    direction: rtl;
+}
 html,
 body,
 #__next {
@@ -21,7 +24,7 @@ body,
     background-color: #000000;
 }
 body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Arabic", "Droid Arabic Kufi", Helvetica, Arial, sans-serif;
     font-size: 1.4rem;
     font-weight: 400;
 }

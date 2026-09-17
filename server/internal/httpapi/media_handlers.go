@@ -33,13 +33,49 @@ func (s *Server) handleListVideos(w http.ResponseWriter, _ *http.Request, user u
 	})
 }
 
+// canManageVideo: the owner manages every video; an uploader manages the
+// videos they uploaded, for as long as they can still upload.
+func canManageVideo(user users.User, meta media.Meta) bool {
+	if user.Role == users.RoleOwner {
+		return true
+	}
+	return user.Role.CanUpload() && meta.UploaderID != "" && meta.UploaderID == user.ID
+}
+
+func (s *Server) handleUpdateVideo(w http.ResponseWriter, r *http.Request, user users.User) {
+	var body struct {
+		Title string `json:"title"`
+	}
+	if !readJSON(w, r, &body) {
+		return
+	}
+	meta, ok := s.index.Get(r.PathValue("id"))
+	if !ok {
+		writeError(w, http.StatusNotFound, "video not found")
+		return
+	}
+	if !canManageVideo(user, meta) {
+		writeError(w, http.StatusForbidden, "only the owner or the uploader can rename this video")
+		return
+	}
+	updated, err := s.index.UpdateTitle(meta.VideoID, body.Title)
+	switch {
+	case errors.Is(err, media.ErrInvalidTitle):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not rename video")
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"video": updated})
+	}
+}
+
 func (s *Server) handleDeleteVideo(w http.ResponseWriter, r *http.Request, user users.User) {
 	meta, ok := s.index.Get(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "video not found")
 		return
 	}
-	if user.Role != users.RoleOwner && (meta.UploaderID == "" || meta.UploaderID != user.ID) {
+	if !canManageVideo(user, meta) {
 		writeError(w, http.StatusForbidden, "only the owner or the uploader can delete this video")
 		return
 	}

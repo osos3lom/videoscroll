@@ -1,18 +1,21 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
+import useSWR from 'swr'
 import VideoCard from '../components/videoCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useSession, useSessionActions } from '../hooks/useSession'
 import { useSocialStorage } from '../hooks/useSocialStorage'
 import { VIDEOS_CHANGED_EVENT, useVideos } from '../hooks/useVideos'
+import { loginHint } from '../lib/accounts'
 import { apiFetch } from '../lib/session'
+import type { PublicUser } from '../types/api'
 import authStyles from './auth.module.css'
 import styles from './sharedGrid.module.css'
 
-const ROLE_LABEL = { owner: 'Owner', uploader: 'Uploader', viewer: 'Member' } as const
+const ROLE_LABEL = { owner: 'المالك', uploader: 'ناشر', viewer: 'عضو' } as const
 
 const ProfilePage = () => {
-    useDocumentTitle('My Profile - VideoScroll')
+    useDocumentTitle('الملف الشخصي - VideoScroll')
 
     const session = useSession()
     const { logout, logoutEverywhere, changePassword } = useSessionActions()
@@ -25,8 +28,22 @@ const ProfilePage = () => {
     const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
     const user = session?.user
-    const myVideos = isDemo ? videos : videos.filter((v) => v.uploaderId && v.uploaderId === user?.id)
+    const isOwner = !isDemo && user?.role === 'owner'
     const canUpload = user?.role === 'owner' || user?.role === 'uploader'
+    const myVideos = isDemo ? videos : videos.filter((v) => v.uploaderId && v.uploaderId === user?.id)
+    // The owner manages every video from here; everyone else, their own.
+    const managedVideos = isOwner ? videos : myVideos
+
+    // Uploader names for the owner's list.
+    const members = useSWR<{ users: PublicUser[] }>(isOwner ? '/api/admin/users' : null, (path: string) =>
+        apiFetch<{ users: PublicUser[] }>(path)
+    )
+    const uploaderName = (uploaderId?: string) => {
+        if (!uploaderId) return 'أضيف من الخادم'
+        if (uploaderId === user?.id) return 'أنت'
+        const member = members.data?.users.find((u) => u.id === uploaderId)
+        return member ? member.displayName || loginHint(member.username) : 'عضو محذوف'
+    }
 
     const totalLikes = videos.reduce((acc, v) => acc + (social[v.videoId]?.likes ?? 0), 0)
     const totalSaved = videos.reduce((acc, v) => acc + (social[v.videoId]?.bookmarks ?? 0), 0)
@@ -39,9 +56,9 @@ const ProfilePage = () => {
             setCurrentPassword('')
             setNewPassword('')
             setShowPassword(false)
-            setMessage({ ok: true, text: 'Password changed. Other devices were signed out.' })
+            setMessage({ ok: true, text: 'تم تغيير كلمة المرور. تم تسجيل الخروج من الأجهزة الأخرى.' })
         } catch (caught) {
-            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'Could not change password' })
+            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'تعذر تغيير كلمة المرور' })
         }
     }
 
@@ -49,21 +66,32 @@ const ProfilePage = () => {
         try {
             await logoutEverywhere()
         } catch (caught) {
-            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'Could not sign out' })
+            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'تعذر تسجيل الخروج' })
         }
     }
 
     const deleteVideo = async (videoId: string, title: string) => {
-        if (!window.confirm(`Delete “${title}” for everyone? This cannot be undone.`)) return
+        if (!window.confirm(`هل تريد بالتأكيد حذف “${title}” للجميع؟ لا يمكن التراجع عن هذا الإجراء.`)) return
         try {
             await apiFetch(`/api/videos/${videoId}`, { method: 'DELETE' })
             window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
         } catch (caught) {
-            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'Could not delete' })
+            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'تعذر حذف الفيديو' })
         }
     }
 
-    const name = user?.displayName ?? 'Demo viewer'
+    const renameVideo = async (videoId: string, title: string) => {
+        const next = window.prompt('عنوان جديد', title)
+        if (next === null || next.trim() === '' || next.trim() === title) return
+        try {
+            await apiFetch(`/api/videos/${videoId}`, { method: 'PATCH', json: { title: next.trim() } })
+            window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
+        } catch (caught) {
+            setMessage({ ok: false, text: caught instanceof Error ? caught.message : 'تعذر تعديل الاسم' })
+        }
+    }
+
+    const name = user?.displayName ?? 'زائر تجريبي'
 
     return (
         <div className={styles.container}>
@@ -74,21 +102,21 @@ const ProfilePage = () => {
 
                 <div className={styles.profileHeader__info}>
                     <h1>{name}</h1>
-                    <p>{user ? `@${user.username} · ${ROLE_LABEL[user.role]}` : 'Sign-in is disabled in demo mode'}</p>
+                    <p>{user ? `@${user.username} · ${ROLE_LABEL[user.role]}` : 'تسجيل الدخول معطل في الوضع التجريبي'}</p>
                 </div>
 
                 <div className={styles.profileStats}>
                     <div className={styles.profileStat}>
                         <span className={styles.profileStat__value}>{myVideos.length}</span>
-                        <span className={styles.profileStat__label}>Uploads</span>
+                        <span className={styles.profileStat__label}>المرفوعات</span>
                     </div>
                     <div className={styles.profileStat}>
                         <span className={styles.profileStat__value}>{totalLikes}</span>
-                        <span className={styles.profileStat__label}>Likes</span>
+                        <span className={styles.profileStat__label}>الإعجابات</span>
                     </div>
                     <div className={styles.profileStat}>
                         <span className={styles.profileStat__value}>{totalSaved}</span>
-                        <span className={styles.profileStat__label}>Saved</span>
+                        <span className={styles.profileStat__label}>المحفوظات</span>
                     </div>
                 </div>
 
@@ -96,17 +124,17 @@ const ProfilePage = () => {
                     <div className={styles.profileActions}>
                         {user.role === 'owner' && (
                             <Link to="/admin" className={styles.profileAction}>
-                                Manage community
+                                إدارة المجتمع
                             </Link>
                         )}
                         <button type="button" className={styles.profileAction} onClick={() => setShowPassword((v) => !v)}>
-                            Change password
+                            تغيير كلمة المرور
                         </button>
                         <button type="button" className={styles.profileAction} onClick={logout}>
-                            Sign out
+                            تسجيل الخروج
                         </button>
                         <button type="button" className={styles.profileAction} onClick={signOutEverywhere}>
-                            Sign out everywhere
+                            تسجيل الخروج من كل الأجهزة
                         </button>
                     </div>
                 )}
@@ -116,7 +144,7 @@ const ProfilePage = () => {
                         <input
                             className={authStyles.input}
                             type="password"
-                            placeholder="Current password"
+                            placeholder="كلمة المرور الحالية"
                             autoComplete="current-password"
                             value={currentPassword}
                             onChange={(e) => setCurrentPassword(e.target.value)}
@@ -125,7 +153,7 @@ const ProfilePage = () => {
                         <input
                             className={authStyles.input}
                             type="password"
-                            placeholder="New password (10+ characters)"
+                            placeholder="كلمة المرور الجديدة (10 أحرف أو أكثر)"
                             autoComplete="new-password"
                             minLength={10}
                             value={newPassword}
@@ -133,7 +161,7 @@ const ProfilePage = () => {
                             required
                         />
                         <button type="submit" className={`${authStyles.button} ${authStyles.button_primary}`}>
-                            Save
+                            حفظ
                         </button>
                     </form>
                 )}
@@ -142,25 +170,34 @@ const ProfilePage = () => {
             </header>
 
             <main>
-                <h2 className={styles.profileSectionTitle}>My Uploads</h2>
+                <h2 className={styles.profileSectionTitle}>
+                    {isOwner ? `جميع الفيديوهات (${managedVideos.length})` : 'مرفوعاتي'}
+                </h2>
+                {isOwner && managedVideos.length > 0 && (
+                    <p className={styles.profileSectionHint}>
+                        بصفتك المالك يمكنك تعديل اسم أو حذف أي فيديو.
+                    </p>
+                )}
 
-                {myVideos.length > 0 ? (
+                {managedVideos.length > 0 ? (
                     <div className={styles.grid}>
-                        {myVideos.map((video) => (
+                        {managedVideos.map((video) => (
                             <VideoCard
                                 key={video.videoId}
                                 video={video}
+                                subtitle={isOwner ? uploaderName(video.uploaderId) : undefined}
+                                onRename={isDemo ? undefined : () => renameVideo(video.videoId, video.title)}
                                 onDelete={isDemo ? undefined : () => deleteVideo(video.videoId, video.title)}
                             />
                         ))}
                     </div>
                 ) : (
                     <div className={styles.empty}>
-                        <h2>No uploads yet</h2>
+                        <h2>{isOwner ? 'لا توجد فيديوهات بعد' : 'لا توجد مرفوعات بعد'}</h2>
                         <p>
                             {canUpload
-                                ? 'Tap the “+” button in the navigation bar to upload your first video.'
-                                : 'Your account can watch but not upload. Ask the owner if you want to share videos.'}
+                                ? 'اضغط على زر "+" في شريط التنقل لرفع أول فيديو لك.'
+                                : 'حسابك يتيح المشاهدة فقط دون الرفع. تواصل مع المالك إذا كنت ترغب في نشر فيديوهات.'}
                         </p>
                     </div>
                 )}

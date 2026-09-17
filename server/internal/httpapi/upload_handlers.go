@@ -77,9 +77,9 @@ func (s *Server) handleAppendUpload(w http.ResponseWriter, r *http.Request, user
 		var maxBytes *http.MaxBytesError
 		switch {
 		case errors.As(err, &mismatch):
-			writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error(), "received": mismatch.Received})
+			writeJSON(w, http.StatusConflict, map[string]any{"error": err.Error(), "code": "upload_offset_mismatch", "received": mismatch.Received})
 		case errors.As(err, &maxBytes):
-			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "chunk too large", "received": received})
+			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]any{"error": "chunk too large", "code": errorCode(http.StatusRequestEntityTooLarge, "chunk too large"), "received": received})
 		case errors.Is(err, jobs.ErrWrongState):
 			writeJSON(w, http.StatusConflict, toUploadResponse(record, received))
 		default:

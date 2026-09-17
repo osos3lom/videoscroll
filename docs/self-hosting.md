@@ -9,7 +9,7 @@ videos and the API run on an old Linux PC at home.
 - [Step 2: install the server](#step-2-install-the-server)
 - [Step 3: expose it over HTTPS](#step-3-expose-it-over-https)
 - [Step 4: point the frontend at it](#step-4-point-the-frontend-at-it)
-- [Step 5: invite people](#step-5-invite-people)
+- [Step 5: add people](#step-5-add-people)
 - [Adding videos](#adding-videos)
 - [Operating it](#operating-it)
 - [Security model](#security-model)
@@ -285,17 +285,40 @@ is a demo that plays three bundled clips.
 
 ---
 
-## Step 5: invite people
+## Step 5: add people
 
-Sign in on the site as the owner → **Profile → Manage community → Create
-link**. Pick a role and an expiry, then send the link privately. Each link
-creates exactly one account.
+Members sign in with their **phone number**. Any usual way of typing it
+works: `05XXXXXXXX`, `5XXXXXXXX`, `+966 5X XXX XXXX` or `009665…`. They
+are all stored as `+9665XXXXXXXX`, and local numbers are read as Saudi.
+Numbers from other countries need their `+` code. A plain username such as
+`osos` also works.
 
-| Role | Watch | Upload / delete own videos | Manage members, invites, any video |
+| Role | Watch | Upload; rename or delete own videos | Manage people; rename or delete any video |
 | --- | --- | --- | --- |
 | viewer | ✓ | | |
 | uploader | ✓ | ✓ | |
 | owner | ✓ | ✓ | ✓ |
+
+### Add someone yourself (recommended)
+
+Sign in as the owner → **Profile → Manage community → Add a member**:
+
+1. Enter their phone number, a name, and their access level.
+2. Press **Generate** for a temporary password.
+3. Press **Create account**.
+4. **Copy message** and send it privately (WhatsApp, SMS). The message has
+   the sign-in link, their number and the temporary password.
+
+At their first sign-in they must choose their own password; until they do,
+the server refuses everything else. **Reset password** on the same page
+does the same for someone who forgot theirs. **Delete** removes an account;
+their videos stay.
+
+### Or send an invite link
+
+**Manage community → Invite links → Create link**. The person picks their
+own phone number (or username) and password. Each link creates exactly one
+account.
 
 The code is in the URL fragment (`/join#code`). Browsers never send fragments
 to servers, so it does not appear in any access log.
@@ -306,9 +329,14 @@ From the command line:
 sudo -u videoscroll /opt/videoscroll/videoscroll invite -env-file /etc/videoscroll.env -role uploader -days 3
 ```
 
-Changing someone's role, disabling them, or pressing **Sign out** next to
-their name ends all of their sessions immediately, on every device, including
-video links already loaded in their browser.
+Changing someone's role, disabling them, resetting their password, or
+pressing **Sign out** next to their name ends all of their sessions
+immediately, on every device, including video links already loaded in their
+browser.
+
+**Videos:** the owner renames or deletes any video from **Profile → All
+videos**, using the pencil and bin buttons. Uploaders do the same for their
+own uploads.
 
 ---
 

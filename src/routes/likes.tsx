@@ -5,7 +5,7 @@ import { useVideos } from '../hooks/useVideos'
 import styles from './sharedGrid.module.css'
 
 const LikesPage = () => {
-    useDocumentTitle('Liked Videos - VideoScroll')
+    useDocumentTitle('الفيديوهات المعجب بها - VideoScroll')
 
     const { videos, social: serverSocial } = useVideos()
     const [social] = useSocialStorage(serverSocial)
@@ -15,9 +15,9 @@ const LikesPage = () => {
     return (
         <div className={styles.container}>
             <header className={styles.header}>
-                <h1 className={styles.header__title}>Liked Videos</h1>
+                <h1 className={styles.header__title}>الفيديوهات المعجب بها</h1>
                 <p className={styles.header__subtitle}>
-                    Browse reels that you have liked ({likedVideos.length})
+                    تصفح المقاطع التي أعجبتك ({likedVideos.length})
                 </p>
             </header>
 
@@ -30,8 +30,8 @@ const LikesPage = () => {
                     </div>
                 ) : (
                     <div className={styles.empty}>
-                        <h2>No liked videos yet</h2>
-                        <p>Go to the feed and click the heart icon on your favorite videos!</p>
+                        <h2>لا توجد مقاطع معجب بها بعد</h2>
+                        <p>انتقل إلى الفيديوهات واضغط على رمز القلب على مقاطعك المفضلة!</p>
                     </div>
                 )}
             </main>

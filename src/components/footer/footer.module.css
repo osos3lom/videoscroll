@@ -2,13 +2,14 @@
     position: absolute;
     /* Push above the floating bottom navbar */
     bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-    left: calc(16px + env(safe-area-inset-left, 0px));
-    right: calc(70px + env(safe-area-inset-right, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    left: calc(70px + env(safe-area-inset-left, 0px));
     color: white;
     display: flex;
     flex-direction: column;
     z-index: 10;
     pointer-events: none;
+    text-align: right;
 }
 
 .videoFooter__text h3 {
@@ -36,7 +37,7 @@
 }
 
 .videoFooter__marquee p {
-    padding-left: 4px;
+    padding-inline-start: 4px;
     color: #e9e9e9;
     font-size: 1.3rem;
     margin: 0;

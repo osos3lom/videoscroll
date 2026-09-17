@@ -1,8 +1,8 @@
 .sidebar {
     position: absolute;
     top: 50%;
-    /* Push in from the right edge on notched iPhones in landscape */
-    right: calc(12px + env(safe-area-inset-right, 0px));
+    /* Push in from the left edge in RTL */
+    left: calc(12px + env(safe-area-inset-left, 0px));
     transform: translateY(-50%);
     color: white;
     display: flex;

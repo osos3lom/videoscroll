@@ -103,12 +103,14 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("POST /api/auth/login", s.handleLogin)
 	mux.HandleFunc("POST /api/auth/join", s.handleJoin)
-	mux.HandleFunc("GET /api/auth/me", s.requireUser(s.handleMe))
+	// Reachable while a password change is pending (see requireUser).
+	mux.HandleFunc("GET /api/auth/me", s.requireSession(s.handleMe))
+	mux.HandleFunc("POST /api/auth/logout-all", s.requireSession(s.handleLogoutAll))
+	mux.HandleFunc("POST /api/auth/password", s.requireSession(s.handleChangePassword))
 	mux.HandleFunc("PATCH /api/auth/me", s.requireUser(s.handleUpdateMe))
-	mux.HandleFunc("POST /api/auth/logout-all", s.requireUser(s.handleLogoutAll))
-	mux.HandleFunc("POST /api/auth/password", s.requireUser(s.handleChangePassword))
 
 	mux.HandleFunc("GET /api/videos", s.requireUser(s.handleListVideos))
+	mux.HandleFunc("PATCH /api/videos/{id}", s.requireUser(s.handleUpdateVideo))
 	mux.HandleFunc("DELETE /api/videos/{id}", s.requireUser(s.handleDeleteVideo))
 
 	// GET patterns also match HEAD.
@@ -122,7 +124,10 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /api/admin/status", s.requireOwner(s.handleStatus))
 	mux.HandleFunc("GET /api/admin/users", s.requireOwner(s.handleListUsers))
+	mux.HandleFunc("POST /api/admin/users", s.requireOwner(s.handleCreateUser))
 	mux.HandleFunc("PATCH /api/admin/users/{id}", s.requireOwner(s.handleUpdateUser))
+	mux.HandleFunc("DELETE /api/admin/users/{id}", s.requireOwner(s.handleDeleteUser))
+	mux.HandleFunc("POST /api/admin/users/{id}/password", s.requireOwner(s.handleResetPassword))
 	mux.HandleFunc("POST /api/admin/users/{id}/revoke", s.requireOwner(s.handleRevokeUser))
 	mux.HandleFunc("GET /api/admin/invites", s.requireOwner(s.handleListInvites))
 	mux.HandleFunc("POST /api/admin/invites", s.requireOwner(s.handleCreateInvite))
@@ -203,7 +208,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+	writeJSON(w, status, map[string]string{"error": message, "code": errorCode(status, message)})
 }
 
 func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
@@ -243,7 +248,29 @@ func (s *Server) authenticate(token string, scope auth.Scope) (users.User, error
 	return user, nil
 }
 
+// codePasswordChangeRequired tells the app to show the "choose your
+// password" screen instead of an error.
+const codePasswordChangeRequired = "password_change_required"
+
+// requireUser admits a signed-in user who has a password of their own.
+// Someone still on an owner-set temporary password can only use the routes
+// wrapped in requireSession, i.e. change it.
 func (s *Server) requireUser(next userHandler) http.HandlerFunc {
+	return s.requireSession(func(w http.ResponseWriter, r *http.Request, user users.User) {
+		if user.MustChangePassword {
+			writeJSON(w, http.StatusForbidden, map[string]string{
+				"error": "choose a new password first",
+				"code":  codePasswordChangeRequired,
+			})
+			return
+		}
+		next(w, r, user)
+	})
+}
+
+// requireSession admits any valid session, including one whose password
+// change is still pending.
+func (s *Server) requireSession(next userHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, err := s.authenticate(bearerToken(r), auth.ScopeSession)
 		if err != nil {
@@ -282,7 +309,11 @@ func (s *Server) requireOwner(next userHandler) http.HandlerFunc {
 // Authorization header, by a media-scoped token in the `t` query parameter.
 func (s *Server) requireMedia(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, err := s.authenticate(r.URL.Query().Get("t"), auth.ScopeMedia); err != nil {
+		user, err := s.authenticate(r.URL.Query().Get("t"), auth.ScopeMedia)
+		if err == nil && user.MustChangePassword {
+			err = auth.ErrInvalidToken
+		}
+		if err != nil {
 			writeError(w, http.StatusUnauthorized, "media token invalid or expired")
 			return
 		}

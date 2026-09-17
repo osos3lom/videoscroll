@@ -11,7 +11,7 @@ import styles from './auth.module.css'
  * server — so it cannot end up in GitHub Pages' or Caddy's access logs.
  */
 const JoinPage = () => {
-    useDocumentTitle('Join - VideoScroll')
+    useDocumentTitle('الانضمام - VideoScroll')
     const { join } = useSessionActions()
 
     const [code, setCode] = useState(() => decodeURIComponent(window.location.hash.replace(/^#/, '')))
@@ -25,7 +25,7 @@ const JoinPage = () => {
         event.preventDefault()
         if (busy) return
         if (password !== confirm) {
-            setError('Passwords do not match')
+            setError('كلمتا المرور غير متطابقتين')
             return
         }
         setBusy(true)
@@ -35,7 +35,7 @@ const JoinPage = () => {
             // Drop the spent code from the address bar and history.
             window.history.replaceState(null, '', window.location.pathname)
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : 'Could not join')
+            setError(caught instanceof Error ? caught.message : 'تعذر إنشاء الحساب')
             setBusy(false)
         }
     }
@@ -44,12 +44,12 @@ const JoinPage = () => {
         <div className={styles.page}>
             <form className={styles.panel} onSubmit={submit}>
                 <p className={styles.brand}>VideoScroll</p>
-                <h1 className={styles.title}>Join the community</h1>
-                <p className={styles.hint}>Choose a username and a password of at least 10 characters.</p>
+                <h1 className={styles.title}>الانضمام إلى المجتمع</h1>
+                <p className={styles.hint}>استخدم رقم هاتفك (أو اختر اسم مستخدم) وكلمة مرور مكونة من 10 أحرف على الأقل.</p>
 
                 {!window.location.hash && (
                     <label className={styles.label}>
-                        Invite code
+                        رمز الدعوة
                         <input
                             className={styles.input}
                             value={code}
@@ -62,22 +62,21 @@ const JoinPage = () => {
                 )}
 
                 <label className={styles.label}>
-                    Username
+                    رقم الهاتف أو اسم المستخدم
                     <input
                         className={styles.input}
                         value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="05XXXXXXXX"
                         autoComplete="username"
                         autoCapitalize="none"
                         spellCheck={false}
-                        pattern="[a-z0-9_.\-]{3,32}"
-                        title="3-32 characters: letters, digits, dot, dash or underscore"
                         required
                     />
                 </label>
 
                 <label className={styles.label}>
-                    Password
+                    كلمة المرور
                     <input
                         className={styles.input}
                         type="password"
@@ -90,7 +89,7 @@ const JoinPage = () => {
                 </label>
 
                 <label className={styles.label}>
-                    Repeat password
+                    تأكيد كلمة المرور
                     <input
                         className={styles.input}
                         type="password"
@@ -109,11 +108,11 @@ const JoinPage = () => {
                     className={`${styles.button} ${styles.button_primary}`}
                     disabled={busy || !code || !username || !password || !confirm}
                 >
-                    {busy ? 'Creating account…' : 'Create account'}
+                    {busy ? 'جارٍ إنشاء الحساب…' : 'إنشاء حساب'}
                 </button>
 
                 <p className={styles.footnote}>
-                    Already a member? <Link to="/login">Sign in</Link>
+                    عضو بالفعل؟ <Link to="/login">تسجيل الدخول</Link>
                 </p>
             </form>
         </div>

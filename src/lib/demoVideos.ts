@@ -16,7 +16,7 @@ export const DEMO_VIDEOS: LocalVideo[] = [
     {
         videoId: 'v-Y2xpcDEubXA0',
         fileName: 'clip1.mp4',
-        title: 'Reel 1 - Ocean Views',
+        title: 'مقطع 1 - إطلالة بحرية',
         size: 6919876,
         src: staticUrl('videos/clip1.mp4'),
         poster: staticUrl('posters/v-Y2xpcDEubXA0.webp'),
@@ -24,7 +24,7 @@ export const DEMO_VIDEOS: LocalVideo[] = [
     {
         videoId: 'v-Y2xpcDIubXA0',
         fileName: 'clip2.mp4',
-        title: 'Reel 2 - Coastal Breeze',
+        title: 'مقطع 2 - نسيم الساحل',
         size: 4106582,
         src: staticUrl('videos/clip2.mp4'),
         poster: staticUrl('posters/v-Y2xpcDIubXA0.webp'),
@@ -32,7 +32,7 @@ export const DEMO_VIDEOS: LocalVideo[] = [
     {
         videoId: 'v-Y2xpcDMubXA0',
         fileName: 'clip3.mp4',
-        title: 'Reel 3 - Scenic Waves',
+        title: 'مقطع 3 - أمواج هادئة',
         size: 8203368,
         src: staticUrl('videos/clip3.mp4'),
         poster: staticUrl('posters/v-Y2xpcDMubXA0.webp'),

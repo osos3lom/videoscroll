@@ -52,7 +52,7 @@
         display: flex !important;
         position: absolute;
         top: 18px;
-        right: 18px;
+        left: 18px;
         z-index: 50;
         align-items: center;
         gap: 6px;

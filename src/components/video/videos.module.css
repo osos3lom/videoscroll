@@ -65,7 +65,7 @@
     position: absolute;
     /* Push below the notch / Dynamic Island on iPhones */
     top: calc(16px + env(safe-area-inset-top, 0px));
-    left: calc(16px + env(safe-area-inset-left, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,7 +92,7 @@
 .video__topControls {
     position: absolute;
     top: calc(16px + env(safe-area-inset-top, 0px));
-    right: calc(16px + env(safe-area-inset-right, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px));
     display: flex;
     align-items: center;
     gap: 8px;

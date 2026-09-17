@@ -161,18 +161,18 @@ const FeedPage = () => {
                     type="button"
                     className={styles.app__wideToggle}
                     onClick={toggleWideMode}
-                    aria-label={isWideMode ? 'Exit full width' : 'Expand full width'}
-                    title={isWideMode ? 'Switch to Portrait Frame' : 'Expand to Full Width'}
+                    aria-label={isWideMode ? 'الخروج من وضع العرض الكامل' : 'توسيع للعرض الكامل'}
+                    title={isWideMode ? 'التبديل إلى الإطار العمودي' : 'توسيع إلى العرض الكامل'}
                 >
                     {isWideMode ? (
                         <>
                             <MdStayCurrentPortrait size={16} />
-                            <span>Standard</span>
+                            <span>قياسي</span>
                         </>
                     ) : (
                         <>
                             <MdFitScreen size={16} />
-                            <span>Full Width</span>
+                            <span>عرض كامل</span>
                         </>
                     )}
                 </button>
@@ -212,26 +212,25 @@ const FeedPage = () => {
                     {videos.length === 0 && (
                         <div className={styles.app__empty}>
                             {isLoading ? (
-                                <h1>Loading videos…</h1>
+                                <h1>جارٍ تحميل الفيديوهات…</h1>
                             ) : error ? (
                                 <>
-                                    <h1>Can’t reach the server</h1>
+                                    <h1>تعذر الاتصال بالخادم</h1>
                                     <p>
-                                        The community server may be offline or restarting. This
-                                        page retries automatically.
+                                        قد يكون خادم المجتمع متوقفاً أو يعيد التشغيل. تحاول هذه الصفحة
+                                        إعادة الاتصال تلقائياً.
                                     </p>
                                 </>
                             ) : (
                                 <>
-                                    <h1>No videos yet</h1>
+                                    <h1>لا توجد فيديوهات حتى الآن</h1>
                                     <p>
                                         {canUpload ? (
                                             <>
-                                                Use the <strong>+</strong> button to upload the
-                                                first one.
+                                                استخدم زر <strong>+</strong> لرفع أول فيديو.
                                             </>
                                         ) : (
-                                            'Nothing has been shared yet. Check back soon.'
+                                            'لم تتم مشاركة أي شيء بعد. تفقد الصفحة قريباً.'
                                         )}
                                     </p>
                                 </>

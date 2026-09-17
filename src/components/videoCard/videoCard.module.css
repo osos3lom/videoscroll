@@ -96,24 +96,34 @@
     }
 }
 
-.card__delete {
+.card__actions {
     position: absolute;
-    right: 8px;
+    left: 8px;
     bottom: 12px;
     z-index: 7;
     display: flex;
+    gap: 8px;
+}
+
+.card__action {
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    /* Big enough to hit with a thumb. */
+    width: 36px;
+    height: 36px;
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(0, 0, 0, 0.7);
     color: #ffffff;
     cursor: pointer;
 }
 
-.card__delete:hover {
+.card__action:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.card__action_danger:hover {
     background: rgba(214, 80, 118, 0.9);
 }

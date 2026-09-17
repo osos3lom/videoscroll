@@ -15,6 +15,8 @@ export interface PublicUser {
     role: Role
     disabled: boolean
     createdAt: string
+    /** The owner set this password; the person must choose their own. */
+    mustChangePassword?: boolean
 }
 
 /** media.Meta — one published video. Carries no URLs; see src/lib/apiUrl.ts. */

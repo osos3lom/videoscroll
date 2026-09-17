@@ -193,7 +193,7 @@ const VideoComponent: FC<IvideosProps> = ({
                 type="button"
                 className={styles.video__press}
                 onClick={togglePlayback}
-                aria-label={isPausedByUser ? 'Play video' : 'Pause video'}
+                aria-label={isPausedByUser ? 'تشغيل الفيديو' : 'إيقاف الفيديو مؤقتاً'}
             >
                 {isPausedByUser && <PlayIcon />}
             </button>
@@ -202,7 +202,7 @@ const VideoComponent: FC<IvideosProps> = ({
                 type="button"
                 className={styles.video__mute}
                 onClick={onToggleMute}
-                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                aria-label={isMuted ? 'إلغاء كتم الصوت' : 'كتم الصوت'}
             >
                 {isMuted ? <MdVolumeOff size={20} /> : <MdVolumeUp size={20} />}
             </button>
@@ -214,18 +214,18 @@ const VideoComponent: FC<IvideosProps> = ({
                         type="button"
                         className={styles.video__pillButton}
                         onClick={toggleFitMode}
-                        aria-label={fitMode === 'fit-width' ? 'Zoom to Fill' : 'Fit Full Width'}
-                        title={fitMode === 'fit-width' ? 'Zoom to Fill' : 'Fit Full Width'}
+                        aria-label={fitMode === 'fit-width' ? 'تكبير لملء الشاشة' : 'ملاءمة العرض بالكامل'}
+                        title={fitMode === 'fit-width' ? 'تكبير لملء الشاشة' : 'ملاءمة العرض بالكامل'}
                     >
                         {fitMode === 'fit-width' ? (
                             <>
                                 <MdCropFree size={16} />
-                                <span>Full Width</span>
+                                <span>العرض الكامل</span>
                             </>
                         ) : (
                             <>
                                 <MdAspectRatio size={16} />
-                                <span>Zoomed</span>
+                                <span>ملء الشاشة</span>
                             </>
                         )}
                     </button>
@@ -234,8 +234,8 @@ const VideoComponent: FC<IvideosProps> = ({
                         type="button"
                         className={styles.video__pillButton}
                         onClick={handleFullscreen}
-                        aria-label="Fullscreen"
-                        title="Fullscreen"
+                        aria-label="ملء الشاشة"
+                        title="ملء الشاشة"
                     >
                         <MdFullscreen size={20} />
                     </button>

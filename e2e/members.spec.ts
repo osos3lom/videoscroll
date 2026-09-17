@@ -23,7 +23,7 @@ test.describe('community membership', () => {
 
         const username = `guest-${Date.now().toString(36)}`
         const password = randomPassword()
-        await guestPage.getByLabel('Username').fill(username)
+        await guestPage.getByLabel('Phone number or username').fill(username)
         await guestPage.getByLabel('Password', { exact: true }).fill(password)
         await guestPage.getByLabel('Repeat password').fill(password)
         await guestPage.getByRole('button', { name: 'Create account' }).click()
@@ -46,11 +46,11 @@ test.describe('community membership', () => {
         const other = await browser.newContext()
         const otherPage = await other.newPage()
         await otherPage.goto(link)
-        await otherPage.getByLabel('Username').fill(`${username}-2`)
+        await otherPage.getByLabel('Phone number or username').fill(`${username}-2`)
         await otherPage.getByLabel('Password', { exact: true }).fill(password)
         await otherPage.getByLabel('Repeat password').fill(password)
         await otherPage.getByRole('button', { name: 'Create account' }).click()
-        await expect(otherPage.getByText(/already used/)).toBeVisible()
+        await expect(otherPage.getByText(/مستخدم مسبقاً/)).toBeVisible()
 
         // The owner's list shows the new member and the invite as used.
         await ownerPage.reload()

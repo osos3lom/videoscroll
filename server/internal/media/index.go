@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/osos3lom/videoscroll/server/internal/store"
 )
@@ -127,7 +128,10 @@ func (ix *Index) Get(id string) (Meta, bool) {
 func (ix *Index) List() []Meta {
 	ix.mu.RLock()
 	defer ix.mu.RUnlock()
-	return append([]Meta(nil), ix.sorted...)
+	// Never nil: an empty community must serialize as [], not null.
+	out := make([]Meta, len(ix.sorted))
+	copy(out, ix.sorted)
+	return out
 }
 
 // BySourceID finds the video published from a given upload job.
@@ -210,4 +214,30 @@ func (ix *Index) PruneOrphanMeta() {
 			_ = os.Remove(filepath.Join(ix.layout.Meta, entry.Name()))
 		}
 	}
+}
+
+// ErrInvalidTitle is returned for an empty or overlong title.
+var ErrInvalidTitle = errors.New("title must be 1-120 characters")
+
+// UpdateTitle changes a video's display title. The file name, and so the
+// video id, never changes.
+func (ix *Index) UpdateTitle(id, title string) (Meta, error) {
+	title = strings.TrimSpace(title)
+	if title == "" || utf8.RuneCountInString(title) > 120 {
+		return Meta{}, ErrInvalidTitle
+	}
+
+	ix.mu.Lock()
+	defer ix.mu.Unlock()
+	meta, ok := ix.byID[id]
+	if !ok {
+		return Meta{}, os.ErrNotExist
+	}
+	meta.Title = title
+	if err := ix.WriteMeta(meta); err != nil {
+		return Meta{}, err
+	}
+	ix.byID[id] = meta
+	ix.rebuildLocked()
+	return meta, nil
 }

@@ -5,7 +5,7 @@ import { useSessionActions } from '../hooks/useSession'
 import styles from './auth.module.css'
 
 const LoginPage = () => {
-    useDocumentTitle('Sign in - VideoScroll')
+    useDocumentTitle('تسجيل الدخول - VideoScroll')
     const { login } = useSessionActions()
 
     const [username, setUsername] = useState('')
@@ -23,7 +23,7 @@ const LoginPage = () => {
             // into the app; nothing else to do here.
             await login(username, password)
         } catch (caught) {
-            setError(caught instanceof Error ? caught.message : 'Sign in failed')
+            setError(caught instanceof Error ? caught.message : 'فشل تسجيل الدخول')
             setPassword('')
             setBusy(false)
         }
@@ -33,15 +33,16 @@ const LoginPage = () => {
         <div className={styles.page}>
             <form className={styles.panel} onSubmit={submit}>
                 <p className={styles.brand}>VideoScroll</p>
-                <h1 className={styles.title}>Sign in</h1>
-                <p className={styles.hint}>This is a private community. You need an account to watch.</p>
+                <h1 className={styles.title}>تسجيل الدخول</h1>
+                <p className={styles.hint}>هذا مجتمع خاص. تحتاج إلى حساب للمشاهدة.</p>
 
                 <label className={styles.label}>
-                    Username
+                    رقم الهاتف أو اسم المستخدم
                     <input
                         className={styles.input}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
+                        placeholder="05XXXXXXXX"
                         autoComplete="username"
                         autoCapitalize="none"
                         spellCheck={false}
@@ -51,7 +52,7 @@ const LoginPage = () => {
                 </label>
 
                 <label className={styles.label}>
-                    Password
+                    كلمة المرور
                     <input
                         className={styles.input}
                         type="password"
@@ -69,11 +70,11 @@ const LoginPage = () => {
                     className={`${styles.button} ${styles.button_primary}`}
                     disabled={busy || !username || !password}
                 >
-                    {busy ? 'Signing in…' : 'Sign in'}
+                    {busy ? 'جارٍ تسجيل الدخول…' : 'تسجيل الدخول'}
                 </button>
 
                 <p className={styles.footnote}>
-                    Got an invite link? <Link to="/join">Join here</Link>
+                    لديك رابط دعوة؟ <Link to="/join">انضم من هنا</Link>
                 </p>
             </form>
         </div>
