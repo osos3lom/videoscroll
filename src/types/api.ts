@@ -102,6 +102,8 @@ export interface ServerStatus {
  */
 export interface LocalVideo extends Pick<VideoMeta, 'videoId' | 'fileName' | 'title' | 'size'> {
     src: string
+    /** Same bytes as `src`, served as an attachment. Absent in the demo. */
+    download?: string
     poster?: string
     width?: number
     height?: number

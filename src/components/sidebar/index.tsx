@@ -1,7 +1,8 @@
-import { MdFavorite, MdOutlineBookmark } from 'react-icons/md'
+import { MdFavorite, MdFileDownload, MdOutlineBookmark } from 'react-icons/md'
 import { RiShareForwardFill } from 'react-icons/ri'
 import styles from './sidebar.module.css'
 import { FC, JSX } from 'react'
+import { downloadVideo } from '../../lib/download'
 import { onShare } from '../../utils/share'
 import { getSocialResults } from '../../utils/socialResults'
 import type { LocalVideo, VideoSocial } from '../../types/api'
@@ -59,6 +60,15 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizonta
                     className={hasBookmarked ? 'animate__animated animate__heartBeat' : ''}
                 />
                 <p>{bookmarks}</p>
+            </button>
+
+            <button
+                type="button"
+                className={styles.sidebar__button}
+                onClick={() => downloadVideo(video)}
+                aria-label="تنزيل الفيديو"
+            >
+                <MdFileDownload size={40} />
             </button>
 
             <button

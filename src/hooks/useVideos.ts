@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import useSWR from 'swr'
-import { IS_DEMO, posterUrl, videoSrc } from '../lib/apiUrl'
+import { IS_DEMO, downloadUrl, posterUrl, videoSrc } from '../lib/apiUrl'
 import { DEMO_VIDEOS } from '../lib/demoVideos'
 import { apiFetch, updateSessionUser } from '../lib/session'
 import type { LocalVideo, VideoSocial, VideosResponse } from '../types/api'
@@ -58,6 +58,7 @@ export function useVideos(): UseVideosResult {
         return (data.data ?? []).map((meta) => ({
             ...meta,
             src: videoSrc(meta.videoId, data.mediaToken),
+            download: downloadUrl(meta.videoId, data.mediaToken),
             poster: posterUrl(meta.videoId, data.mediaToken),
         }))
     }, [data])

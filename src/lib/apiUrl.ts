@@ -30,6 +30,11 @@ export function videoSrc(videoId: string, mediaToken: string): string {
     return apiUrl(`/api/video/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
 }
 
+/** Like `videoSrc`, but the server answers with Content-Disposition: attachment. */
+export function downloadUrl(videoId: string, mediaToken: string): string {
+    return apiUrl(`/api/download/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
+}
+
 export function posterUrl(videoId: string, mediaToken: string): string {
     return apiUrl(`/api/poster/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
 }

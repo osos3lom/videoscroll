@@ -116,6 +116,7 @@ func (s *Server) Handler() http.Handler {
 	// GET patterns also match HEAD.
 	mux.HandleFunc("GET /api/video/{id}", s.requireMedia(s.handleVideo))
 	mux.HandleFunc("GET /api/poster/{id}", s.requireMedia(s.handlePoster))
+	mux.HandleFunc("GET /api/download/{id}", s.requireMedia(s.handleDownload))
 
 	mux.HandleFunc("POST /api/uploads", s.requireUploader(s.handleCreateUpload))
 	mux.HandleFunc("PUT /api/uploads/{id}", s.requireUploader(s.handleAppendUpload))

@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/osos3lom/videoscroll/server/internal/media"
 	"github.com/osos3lom/videoscroll/server/internal/users"
@@ -97,6 +101,49 @@ func (s *Server) handleVideo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.serveFile(w, r, s.videosRoot, name, media.MimeType(name))
+}
+
+// handleDownload serves the same bytes as handleVideo, as an attachment
+// named after the video's title. It is a separate path so playback URLs, and
+// the service worker that matches them, are unaffected. Ranges still work, so
+// an interrupted download can resume.
+func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	name := media.FileNameFromID(id)
+	if name == "" {
+		writeError(w, http.StatusNotFound, "video not found")
+		return
+	}
+	title := ""
+	if meta, ok := s.index.Get(id); ok {
+		title = meta.Title
+	}
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{
+		"filename": downloadName(title, name),
+	}))
+	s.serveFile(w, r, s.videosRoot, name, media.MimeType(name))
+}
+
+// downloadName turns a title into a safe file name that keeps the video's
+// extension. Characters that no file system accepts are dropped; Arabic and
+// other letters are kept (the header encodes them per RFC 2231).
+func downloadName(title, fileName string) string {
+	ext := filepath.Ext(fileName)
+	clean := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || strings.ContainsRune(`/\:*?"<>|`, r) {
+			return -1
+		}
+		return r
+	}, title)
+	clean = strings.Trim(strings.TrimSpace(clean), ".")
+	for utf8.RuneCountInString(clean) > 100 {
+		_, size := utf8.DecodeLastRuneInString(clean)
+		clean = clean[:len(clean)-size]
+	}
+	if clean == "" {
+		clean = strings.TrimSuffix(fileName, ext)
+	}
+	return clean + ext
 }
 
 func (s *Server) handlePoster(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,7 @@ import { useSession, useSessionActions } from '../hooks/useSession'
 import { useSocialStorage } from '../hooks/useSocialStorage'
 import { VIDEOS_CHANGED_EVENT, useVideos } from '../hooks/useVideos'
 import { loginHint } from '../lib/accounts'
+import { downloadVideo } from '../lib/download'
 import { apiFetch } from '../lib/session'
 import type { PublicUser } from '../types/api'
 import authStyles from './auth.module.css'
@@ -209,6 +210,7 @@ const ProfilePage = () => {
                                 key={video.videoId}
                                 video={video}
                                 subtitle={isOwner ? uploaderName(video.uploaderId) : undefined}
+                                onDownload={() => downloadVideo(video)}
                                 onRename={isDemo ? undefined : () => renameVideo(video.videoId, video.title)}
                                 onDelete={isDemo ? undefined : () => deleteVideo(video.videoId, video.title)}
                             />

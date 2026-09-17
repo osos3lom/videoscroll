@@ -1,5 +1,5 @@
 import { FC, JSX, useRef, useState, useEffect } from 'react'
-import { MdDeleteOutline, MdEdit } from 'react-icons/md'
+import { MdDeleteOutline, MdEdit, MdFileDownload } from 'react-icons/md'
 import { Link } from 'react-router'
 import type { LocalVideo } from '../../types/api'
 import styles from './videoCard.module.css'
@@ -10,11 +10,13 @@ export interface IVideoCardProps {
     onDelete?: () => void
     /** Shown as a rename button when the viewer may rename this video. */
     onRename?: () => void
+    /** Shown as a download button. */
+    onDownload?: () => void
     /** Small caption under the title, e.g. who uploaded it. */
     subtitle?: string
 }
 
-const VideoCard: FC<IVideoCardProps> = ({ video, onDelete, onRename, subtitle }): JSX.Element => {
+const VideoCard: FC<IVideoCardProps> = ({ video, onDelete, onRename, onDownload, subtitle }): JSX.Element => {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [progress, setProgress] = useState(0)
 
@@ -92,8 +94,22 @@ const VideoCard: FC<IVideoCardProps> = ({ video, onDelete, onRename, subtitle })
                     </span>
                 </div>
 
-                {(onDelete || onRename) && (
+                {(onDelete || onRename || onDownload) && (
                     <div className={styles.card__actions}>
+                        {onDownload && (
+                            <button
+                                type="button"
+                                className={styles.card__action}
+                                aria-label={`تنزيل ${video.title}`}
+                                onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    onDownload()
+                                }}
+                            >
+                                <MdFileDownload size={18} />
+                            </button>
+                        )}
                         {onRename && (
                             <button
                                 type="button"

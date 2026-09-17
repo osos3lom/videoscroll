@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -126,6 +127,7 @@ func TestEverythingRequiresAuth(t *testing.T) {
 		"/api/videos",
 		"/api/video/" + media.VideoID("clip.mp4"),
 		"/api/poster/" + media.VideoID("clip.mp4"),
+		"/api/download/" + media.VideoID("clip.mp4"),
 		"/api/admin/users",
 		"/api/auth/me",
 	} {
@@ -228,6 +230,53 @@ func TestRangeRequests(t *testing.T) {
 	target, _ = f.mediaURL(f.viewer, "")
 	if rec := f.do("GET", evil+"?"+strings.SplitN(target, "?", 2)[1], nil, nil); rec.Code != http.StatusNotFound {
 		t.Errorf("traversal id = %d, want 404", rec.Code)
+	}
+}
+
+func TestDownload(t *testing.T) {
+	f := newFixture(t)
+	id := media.VideoID("clip.mp4")
+	f.index.Add(media.Meta{VideoID: id, FileName: "clip.mp4", Title: "رحلة: الشاطئ/2026"})
+
+	current, _ := f.users.Get(f.viewer.ID)
+	token, _ := f.signer.IssueMedia(current.ID, current.Ver)
+	target := "/api/download/" + id + "?t=" + token
+
+	rec := f.do("GET", target, nil, nil)
+	if rec.Code != http.StatusOK || !bytes.Equal(rec.Body.Bytes(), f.content) {
+		t.Fatalf("download: status %d, %d bytes", rec.Code, rec.Body.Len())
+	}
+	disposition, params, err := mime.ParseMediaType(rec.Header().Get("Content-Disposition"))
+	if err != nil || disposition != "attachment" || params["filename"] != "رحلة الشاطئ2026.mp4" {
+		t.Errorf("Content-Disposition = %q (%v)", rec.Header().Get("Content-Disposition"), err)
+	}
+
+	// A broken download resumes.
+	rec = f.do("GET", target, nil, map[string]string{"Range": "bytes=9000-"})
+	if rec.Code != http.StatusPartialContent || !bytes.Equal(rec.Body.Bytes(), f.content[9000:]) {
+		t.Errorf("ranged download: status %d, %d bytes", rec.Code, rec.Body.Len())
+	}
+
+	// Session tokens are not media tokens.
+	session, _ := f.signer.IssueSession(current.ID, current.Ver)
+	if rec := f.do("GET", "/api/download/"+id+"?t="+session, nil, nil); rec.Code != http.StatusUnauthorized {
+		t.Errorf("download with a session token = %d, want 401", rec.Code)
+	}
+}
+
+func TestDownloadName(t *testing.T) {
+	cases := []struct{ title, file, want string }{
+		{"Beach day", "123-beach.mov", "Beach day.mov"},
+		{"  ..hidden..  ", "a.mp4", "hidden.mp4"},
+		{"a/b\\c:d*e?f\"g<h>i|j\x00k", "a.mp4", "abcdefghijk.mp4"},
+		{"", "1789-clip.webm", "1789-clip.webm"},
+		{"???", "x.mp4", "x.mp4"},
+		{strings.Repeat("م", 150), "x.mp4", strings.Repeat("م", 100) + ".mp4"},
+	}
+	for _, tc := range cases {
+		if got := downloadName(tc.title, tc.file); got != tc.want {
+			t.Errorf("downloadName(%q, %q) = %q, want %q", tc.title, tc.file, got, tc.want)
+		}
 	}
 }
 
