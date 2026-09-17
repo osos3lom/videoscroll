@@ -5,6 +5,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { usePrefetch } from '../hooks/usePrefetch'
 import { useSession } from '../hooks/useSession'
 import { useSocialStorage } from '../hooks/useSocialStorage'
+import { seekBy } from '../hooks/useVideoGestures'
 import { useVideos } from '../hooks/useVideos'
 import styles from './feed.module.css'
 
@@ -83,6 +84,19 @@ const FeedPage = () => {
 
             if (event.key.toLowerCase() === 'm') {
                 setIsMuted((muted) => !muted)
+                return
+            }
+
+            // Physical directions, like the double-tap sides: → is forward.
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                const middle = container.getBoundingClientRect().top + container.clientHeight / 2
+                const video = Array.from(container.querySelectorAll('video')).find((el) => {
+                    const rect = el.getBoundingClientRect()
+                    return rect.top <= middle && rect.bottom >= middle
+                })
+                if (!video) return
+                event.preventDefault()
+                seekBy(video, event.key === 'ArrowRight' ? 5 : -5)
                 return
             }
 

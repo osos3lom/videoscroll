@@ -4,8 +4,10 @@ import Footer from '../footer'
 import PlayIcon from '../playIcon'
 import Sidebar from '../sidebar'
 import { useInViewPlayback } from '../../hooks/useInViewPlayback'
+import { useVideoGestures } from '../../hooks/useVideoGestures'
 import { VIDEOS_CHANGED_EVENT } from '../../hooks/useVideos'
 import type { LocalVideo, VideoSocial } from '../../types/api'
+import SeekOverlay from './seekOverlay'
 import styles from './videos.module.css'
 
 export interface IvideosProps {
@@ -74,6 +76,9 @@ const VideoComponent: FC<IvideosProps> = ({
         }
     }, [isMuted, isNearView])
 
+    const togglePlayback = () => setIsPausedByUser((paused) => !paused)
+    const gestures = useVideoGestures(videoRef, { onTogglePlayback: togglePlayback, enabled: isInView && isNearView })
+
     useEffect(() => {
         const element = videoRef.current
         if (!element) return
@@ -93,11 +98,10 @@ const VideoComponent: FC<IvideosProps> = ({
         }
     }, [isInView, isPausedByUser, isMuted])
 
-    const togglePlayback = () => setIsPausedByUser((paused) => !paused)
 
     const handleCanPlay = () => {
         const element = videoRef.current
-        if (element && isInView && !isPausedByUser) {
+        if (element && isInView && !isPausedByUser && !gestures.isScrubbing()) {
             element.muted = isMuted
             void element.play().catch(() => undefined)
         }
@@ -192,11 +196,13 @@ const VideoComponent: FC<IvideosProps> = ({
             <button
                 type="button"
                 className={styles.video__press}
-                onClick={togglePlayback}
+                {...gestures.handlers}
                 aria-label={isPausedByUser ? 'تشغيل الفيديو' : 'إيقاف الفيديو مؤقتاً'}
             >
                 {isPausedByUser && <PlayIcon />}
             </button>
+
+            <SeekOverlay skip={gestures.skip} scrub={gestures.scrub} />
 
             <button
                 type="button"

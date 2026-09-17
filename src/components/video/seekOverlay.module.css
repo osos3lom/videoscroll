@@ -1,0 +1,109 @@
+/* Above the video and its tap target, below the sidebar and buttons. */
+.overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Physical sides on purpose: right is forward in every language. */
+.skip {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 36%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: #ffffff;
+    font-size: 2.4rem;
+    font-weight: 700;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    animation: skip-fade 0.7s ease-out forwards;
+}
+
+.skip small {
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+.skip_forward {
+    right: 0;
+    border-radius: 50% 0 0 50%;
+    background: radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.22), transparent 70%);
+}
+
+.skip_back {
+    left: 0;
+    border-radius: 0 50% 50% 0;
+    background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.22), transparent 70%);
+}
+
+@keyframes skip-fade {
+    0% {
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.scrub {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.scrub__time {
+    margin: 0;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.scrub__bar {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+}
+
+.scrub__fill {
+    height: 100%;
+    background: #ffffff;
+}
+
+.visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skip {
+        animation-duration: 0.01s;
+        animation-fill-mode: none;
+    }
+}

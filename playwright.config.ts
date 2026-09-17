@@ -31,7 +31,7 @@ export default defineConfig({
         { name: 'desktop', use: { viewport: { width: 1280, height: 800 } } },
         {
             name: 'mobile',
-            testMatch: /feed\.spec\.ts/,
+            testMatch: /(feed|gestures)\.spec\.ts/,
             use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
         },
     ],
