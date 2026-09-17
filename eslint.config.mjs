@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
     {
-        ignores: ['dist/**', 'dist-local/**', '.sim/**', '.sim-e2e/**', 'test-results/**', 'playwright-report/**', 'dist-server/**', 'media/**', 'server/**', 'node_modules/**'],
+        ignores: ['dist/**', '.sim/**', '.sim-e2e/**', 'test-results/**', 'playwright-report/**', 'dist-server/**', 'media/**', 'server/**', 'node_modules/**'],
     },
     js.configs.recommended,
     tseslint.configs.recommended,
@@ -39,7 +39,7 @@ export default tseslint.config(
     prettier,
     {
         rules: {
-            // console.error is the app's logger on the server side.
+            // console.error is the only allowed console call: it reports real failures.
             'no-console': ['warn', { allow: ['error'] }],
             '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
         },

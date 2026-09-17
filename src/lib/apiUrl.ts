@@ -34,12 +34,6 @@ export function posterUrl(videoId: string, mediaToken: string): string {
     return apiUrl(`/api/poster/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
 }
 
-/** Extracts the video id from a URL built by `videoSrc`, or null. */
-export function videoIdFromUrl(url: string): string | null {
-    const match = /\/api\/video\/(v-[A-Za-z0-9_-]+)(?:\?|$)/.exec(url)
-    return match ? match[1] : null
-}
-
 /**
  * URL of a file shipped inside this build's own `public/` directory. Honours
  * `base`, so it resolves correctly under the `/videoscroll/` Pages prefix and

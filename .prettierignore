@@ -1,6 +1,10 @@
-.next
-next-env.d.ts
 node_modules
-yarn.lock
 package-lock.json
+dist
+dist-server
+.sim
+.sim-e2e
+test-results
+playwright-report
+media
 public
