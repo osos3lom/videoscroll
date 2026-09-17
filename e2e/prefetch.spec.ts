@@ -39,7 +39,7 @@ test('upcoming videos are prefetched and served by the service worker, and sign-
 
     // Signing out leaves nothing from the community on the device.
     await page.goto('profile')
-    await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+    await page.getByRole('button', { name: 'تسجيل الخروج', exact: true }).click()
     await expect(page).toHaveURL(/\/login$/)
     await expect.poll(async () => (await cachedEntries(page)).length).toBe(0)
     expect(await page.evaluate(() => localStorage.getItem('videoscroll_session'))).toBeNull()

@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react'
-import type { VideoSocial } from '../types/video'
+import type { VideoSocial } from '../types/api'
 
 const LOCAL_STORAGE_SOCIAL_KEY = 'videoscroll_social'
 

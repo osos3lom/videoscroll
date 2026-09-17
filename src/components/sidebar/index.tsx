@@ -4,7 +4,7 @@ import styles from './sidebar.module.css'
 import { FC, JSX } from 'react'
 import { onShare } from '../../utils/share'
 import { getSocialResults } from '../../utils/socialResults'
-import type { LocalVideo, VideoSocial } from '../../types/video'
+import type { LocalVideo, VideoSocial } from '../../types/api'
 import 'animate.css'
 
 export interface ISidebarProps {

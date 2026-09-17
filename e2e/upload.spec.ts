@@ -56,7 +56,7 @@ test('an interrupted upload resumes after the tab is closed, then publishes', as
     expect(resumedStatus.uploadId).toBe(uploadId)
     expect(resumedStatus.received).toBe(CHUNK)
 
-    await expect(second.getByText(/is live/)).toBeVisible({ timeout: 60_000 })
+    await expect(second.getByText(/تم النشر بنجاح/)).toBeVisible({ timeout: 60_000 })
 
     // --- The published video: remuxed, never re-encoded, correct size. ------
     const done = await apiFetch<UploadStatus>(`/api/uploads/${uploadId}`, { token: ownerToken() })

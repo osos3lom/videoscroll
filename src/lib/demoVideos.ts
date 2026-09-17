@@ -1,4 +1,4 @@
-import type { LocalVideo } from '../types/video'
+import type { LocalVideo } from '../types/api'
 import { staticUrl } from './apiUrl'
 
 /**

@@ -24,6 +24,7 @@ vite.config.mts         webmanifest, CSP meta, demo clips, sw.js build
 src/                    browser only
   App.tsx               auth gate + routes (login, join, choose-password, feed, likes, saved, profile, admin)
   lib/accounts.ts       phone display, temporary passwords, the "your account" message
+  lib/demoVideos.ts     bundled clips for the no-API Pages build
   types/api.ts          hand-mirrored Go wire types
   lib/apiUrl.ts         the single source of URL composition
   lib/session.ts        bearer token + apiFetch (401 → sign out + wipe cache)
@@ -34,17 +35,21 @@ src/                    browser only
 server/                 Go module
   cmd/videoscroll/      serve | create-owner | invite | reset-password | users | import | doctor
   internal/auth         tokens, argon2id, rate limiter
+  internal/config       environment config, media root defaults
   internal/users        users + invites (data/users.json), phone-number usernames
   internal/media        layout, ids, metadata index, disk free
   internal/probe        ffprobe + MP4 box walker
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
   internal/jobs         uploads + persistent single-worker queue
+  internal/store        atomic JSON state files
   internal/httpapi      routes, CORS, handlers
 deploy/                 Caddyfile, systemd units, install.sh (+ --rollback), backup.sh + timer, DuckDNS timer
 docs/self-hosting.md    setup and operations guide
 ```
 
 ## Rules that are load-bearing
+
+- **Work on `main`; it is the only branch.** Pushing `main` automatically deploys the GitHub Pages frontend to production. Keep `main` clean and working at all times.
 
 - **Every API route and media byte is authorized server-side.** The SPA's
   login gate is only a convenience. `/api/health` is the only unauthenticated

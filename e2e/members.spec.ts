@@ -6,10 +6,10 @@ test.describe('community membership', () => {
         const owner = await browser.newContext({ storageState: OWNER_STATE })
         const ownerPage = await owner.newPage()
         await ownerPage.goto('profile')
-        await ownerPage.getByRole('link', { name: 'Manage community' }).click()
-        await expect(ownerPage.getByRole('heading', { name: 'Community' })).toBeVisible()
+        await ownerPage.getByRole('link', { name: 'إدارة المجتمع' }).click()
+        await expect(ownerPage.getByRole('heading', { name: 'المجتمع' })).toBeVisible()
 
-        await ownerPage.getByRole('button', { name: 'Create link' }).click()
+        await ownerPage.getByRole('button', { name: 'إنشاء رابط' }).click()
         const link = (await ownerPage.locator('code').textContent())!.trim()
         expect(link).toMatch(/\/videoscroll\/join#[\w-]{22}$/)
 
@@ -17,24 +17,24 @@ test.describe('community membership', () => {
         const guest = await browser.newContext()
         const guestPage = await guest.newPage()
         await guestPage.goto(link)
-        await expect(guestPage.getByRole('heading', { name: 'Join the community' })).toBeVisible()
+        await expect(guestPage.getByRole('heading', { name: 'الانضمام إلى المجتمع' })).toBeVisible()
         // The code came from the fragment, so the field is not shown.
-        await expect(guestPage.getByLabel('Invite code')).toHaveCount(0)
+        await expect(guestPage.getByLabel('رمز الدعوة')).toHaveCount(0)
 
         const username = `guest-${Date.now().toString(36)}`
         const password = randomPassword()
-        await guestPage.getByLabel('Phone number or username').fill(username)
-        await guestPage.getByLabel('Password', { exact: true }).fill(password)
-        await guestPage.getByLabel('Repeat password').fill(password)
-        await guestPage.getByRole('button', { name: 'Create account' }).click()
+        await guestPage.getByLabel('رقم الهاتف أو اسم المستخدم').fill(username)
+        await guestPage.getByLabel('كلمة المرور', { exact: true }).fill(password)
+        await guestPage.getByLabel('تأكيد كلمة المرور').fill(password)
+        await guestPage.getByRole('button', { name: 'إنشاء حساب' }).click()
 
         await expect(guestPage.locator('#videos__container video').first()).toBeVisible()
         // The spent code is gone from the address bar.
         expect(guestPage.url()).not.toContain('#')
-        await expect(guestPage.getByRole('button', { name: 'Upload video' })).toHaveCount(0)
+        await expect(guestPage.getByRole('button', { name: 'رفع فيديو' })).toHaveCount(0)
 
         await guestPage.goto('admin')
-        await expect(guestPage.getByText('Only the owner can manage the community.')).toBeVisible()
+        await expect(guestPage.getByText('المالك فقط هو من يمكنه إدارة المجتمع.')).toBeVisible()
 
         const token = await guestPage.evaluate(
             () => JSON.parse(localStorage.getItem('videoscroll_session')!).token as string
@@ -46,16 +46,16 @@ test.describe('community membership', () => {
         const other = await browser.newContext()
         const otherPage = await other.newPage()
         await otherPage.goto(link)
-        await otherPage.getByLabel('Phone number or username').fill(`${username}-2`)
-        await otherPage.getByLabel('Password', { exact: true }).fill(password)
-        await otherPage.getByLabel('Repeat password').fill(password)
-        await otherPage.getByRole('button', { name: 'Create account' }).click()
+        await otherPage.getByLabel('رقم الهاتف أو اسم المستخدم').fill(`${username}-2`)
+        await otherPage.getByLabel('كلمة المرور', { exact: true }).fill(password)
+        await otherPage.getByLabel('تأكيد كلمة المرور').fill(password)
+        await otherPage.getByRole('button', { name: 'إنشاء حساب' }).click()
         await expect(otherPage.getByText(/مستخدم مسبقاً/)).toBeVisible()
 
         // The owner's list shows the new member and the invite as used.
         await ownerPage.reload()
         await expect(ownerPage.getByText(`@${username}`, { exact: true })).toBeVisible()
-        await expect(ownerPage.getByText(`used by @${username}`)).toBeVisible()
+        await expect(ownerPage.getByText(`تم استخدامها بواسطة @${username}`)).toBeVisible()
 
         await Promise.all([owner.close(), guest.close(), other.close()])
     })
@@ -77,8 +77,8 @@ test.describe('community membership', () => {
             .locator('li')
             .filter({ hasText: `@${member.username}` })
             .filter({ has: ownerPage.getByRole('combobox') })
-        await row.getByRole('button', { name: 'Disable' }).click()
-        await expect(row.getByRole('button', { name: 'Enable' })).toBeVisible()
+        await row.getByRole('button', { name: 'تعطيل' }).click()
+        await expect(row.getByRole('button', { name: 'تفعيل' })).toBeVisible()
 
         // Their existing token is dead: the app drops them to sign-in.
         await memberPage.reload()

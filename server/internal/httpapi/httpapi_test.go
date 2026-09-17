@@ -1,9 +1,12 @@
 package httpapi
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/osos3lom/videoscroll/server/internal/auth"
 	"github.com/osos3lom/videoscroll/server/internal/config"
@@ -312,6 +316,33 @@ func TestLoginRateLimit(t *testing.T) {
 	}
 	if last != http.StatusTooManyRequests {
 		t.Errorf("after 12 bad logins status = %d, want 429", last)
+	}
+}
+
+func TestSlowJSONBodyIsCutOff(t *testing.T) {
+	f := newFixture(t)
+	saved := jsonBodyTimeout
+	jsonBodyTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { jsonBodyTimeout = saved })
+
+	srv := httptest.NewServer(f.handler)
+	t.Cleanup(srv.Close)
+	conn, err := net.Dial("tcp", srv.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	// Promise 100 bytes and send only the first few, then go quiet.
+	fmt.Fprintf(conn, "POST /api/auth/login HTTP/1.1\r\nHost: test\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n{\"user")
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatalf("server kept waiting for the body: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400", resp.StatusCode)
 	}
 }
 

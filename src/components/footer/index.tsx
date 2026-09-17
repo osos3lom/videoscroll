@@ -2,7 +2,7 @@ import styles from './footer.module.css'
 import { RiMusic2Fill } from 'react-icons/ri'
 import Marquee from 'react-fast-marquee'
 import { FC, JSX } from 'react'
-import type { LocalVideo } from '../../types/video'
+import type { LocalVideo } from '../../types/api'
 
 export interface IFooterProps {
     video: LocalVideo

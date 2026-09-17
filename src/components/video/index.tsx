@@ -5,7 +5,7 @@ import PlayIcon from '../playIcon'
 import Sidebar from '../sidebar'
 import { useInViewPlayback } from '../../hooks/useInViewPlayback'
 import { VIDEOS_CHANGED_EVENT } from '../../hooks/useVideos'
-import type { LocalVideo, VideoSocial } from '../../types/video'
+import type { LocalVideo, VideoSocial } from '../../types/api'
 import styles from './videos.module.css'
 
 export interface IvideosProps {

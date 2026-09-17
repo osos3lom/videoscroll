@@ -211,7 +211,13 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message, "code": errorCode(status, message)})
 }
 
+// jsonBodyTimeout bounds how long a client may take to send a JSON body. The
+// server has no global ReadTimeout (it would cut off uploads and streams), so
+// without this a trickling body would hold its goroutine forever.
+var jsonBodyTimeout = 30 * time.Second
+
 func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(jsonBodyTimeout))
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")

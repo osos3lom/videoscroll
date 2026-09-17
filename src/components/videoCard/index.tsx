@@ -1,7 +1,7 @@
 import { FC, JSX, useRef, useState, useEffect } from 'react'
 import { MdDeleteOutline, MdEdit } from 'react-icons/md'
 import { Link } from 'react-router'
-import type { LocalVideo } from '../../types/video'
+import type { LocalVideo } from '../../types/api'
 import styles from './videoCard.module.css'
 
 export interface IVideoCardProps {

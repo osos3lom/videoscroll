@@ -3,7 +3,7 @@ import { IS_DEMO } from '../lib/apiUrl'
 import { prefetchCount } from '../lib/mediaCache/network'
 import { markWatched, prefetcher } from '../lib/mediaCache/prefetcher'
 import { hasActiveServiceWorker } from '../lib/serviceWorker'
-import type { LocalVideo } from '../types/video'
+import type { LocalVideo } from '../types/api'
 
 /**
  * Keeps the opening seconds of the next videos in the on-device cache.
