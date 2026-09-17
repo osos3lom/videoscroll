@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -278,9 +279,41 @@ func cmdDoctor(args []string) error {
 		warn("HOST", cfg.Host+" is not loopback; the API is reachable without Caddy's TLS")
 	}
 
+	checkBackup(warn)
+
 	if failures > 0 {
 		return fmt.Errorf("%d check(s) failed", failures)
 	}
 	fmt.Println("all checks passed")
 	return nil
+}
+
+// checkBackup reports on deploy/backup.sh's last successful run. It warns
+// rather than fails: a missing backup does not stop the server working.
+func checkBackup(warn func(label, detail string)) {
+	dir := os.Getenv("BACKUP_DIR")
+	if dir == "" {
+		if runtime.GOOS != "linux" {
+			return // development machine
+		}
+		dir = "/mnt/videoscroll-backup"
+	}
+
+	stamp := filepath.Join(dir, "videoscroll", "last-success")
+	data, err := os.ReadFile(stamp)
+	if err != nil {
+		warn("backup", "no successful backup found at "+stamp+" (is the USB disk mounted and the timer enabled?)")
+		return
+	}
+	when, err := time.Parse(time.RFC3339, strings.TrimSpace(string(data)))
+	if err != nil {
+		warn("backup", "unreadable timestamp in "+stamp)
+		return
+	}
+	age := time.Since(when)
+	if age > 48*time.Hour {
+		warn("backup", fmt.Sprintf("last successful backup was %s ago", age.Round(time.Hour)))
+		return
+	}
+	fmt.Printf("[ok  ] backup — last success %s ago\n", age.Round(time.Minute))
 }

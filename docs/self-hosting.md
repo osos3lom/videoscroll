@@ -129,6 +129,26 @@ sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
+**Mount the USB backup disk at `/mnt/videoscroll-backup`**. The old HDD is
+otherwise the only copy of every video. Use `nofail`, so the PC still boots
+when the disk is unplugged. The backup script refuses to run if nothing is
+mounted there.
+
+```
+UUID=<usb-uuid>  /mnt/videoscroll-backup  ext4  defaults,noatime,nofail  0  2
+```
+
+**Check the HDD's health** before trusting it with a community's videos:
+
+```bash
+sudo apt install -y smartmontools
+sudo smartctl -H -A /dev/sdX     # look at Reallocated_Sector_Ct and Current_Pending_Sector
+sudo systemctl enable --now smartd
+```
+
+Non-zero reallocated or pending sectors on an old disk mean: replace it
+before launch.
+
 **Hardware encoding (optional).** If the PC has an Intel or AMD iGPU,
 `videoscroll doctor` reports `h264_vaapi` and full transcodes use it. It is
 only needed for unplayable codecs, so this is a nice-to-have.
@@ -143,23 +163,26 @@ Build the Linux binary on your dev machine (any OS with Go installed):
 npm run build:server:linux     # → dist-server/videoscroll
 ```
 
-Or download the `videoscroll-linux-amd64` artifact from the **Server (Go)**
-GitHub Actions run.
+Or download the `videoscroll-linux-amd64` artifact from the **Server (Go) and
+end-to-end** GitHub Actions run.
 
-Copy the repo (or just `deploy/`, `.env.example` and the binary) to the PC
-and run:
+On the PC, clone the repo (the install script needs `deploy/` and
+`.env.example` from it), put the binary next to it, and run:
 
 ```bash
-sudo ./deploy/install.sh dist-server/videoscroll
+git clone https://github.com/osos3lom/videoscroll.git && cd videoscroll
+sudo ./deploy/install.sh ~/videoscroll        # path to the downloaded binary
 ```
 
 The script is idempotent. It:
 
+- installs ffmpeg and rsync if missing
 - creates the `videoscroll` system user
 - creates the media directories
-- installs the binary to `/opt/videoscroll`
+- installs the binary to `/opt/videoscroll`, keeping the previous one for
+  rollback
 - creates `/etc/videoscroll.env`, only if it doesn't exist yet
-- installs and starts the systemd unit
+- installs and starts the server, and enables the nightly backup timer
 - runs `doctor`
 
 Then:
@@ -320,15 +343,66 @@ video links already loaded in their browser.
 | Queue, disk, failures | Profile → Manage community |
 | Why did a video fail? | `cat /srv/videoscroll/failed/*.json` |
 
-**Update:** build or download a new binary, then re-run
-`sudo ./deploy/install.sh <binary>`. It swaps the file atomically and
-restarts the service. Queued jobs resume, and in-progress uploads continue
-from their offset.
+### Updating and rolling back
 
-**Back up** `/srv/videoscroll/data/` (accounts and the session secret) and
-`/srv/videoscroll/meta/`. The videos themselves are the large part; back them
-up with whatever you use for the rest of the disk (e.g. `rsync` to a USB
-drive). Posters can always be regenerated.
+```bash
+cd ~/videoscroll && git pull
+sudo ./deploy/install.sh ~/videoscroll-new    # the new binary
+```
+
+The binary is swapped atomically and the service restarts. Queued jobs
+resume, and in-progress uploads continue from their offset. The previous
+binary is kept, so if the new one misbehaves:
+
+```bash
+sudo ./deploy/install.sh --rollback
+```
+
+Running `--rollback` again swaps forward. Frontend problems roll back
+separately: revert the commit, or delete the `VITE_API_ORIGIN` variable and
+re-run the Pages workflow to fall back to the demo.
+
+### Backups
+
+`videoscroll-backup.timer` runs `/opt/videoscroll/backup.sh` nightly at about
+03:30, at idle CPU and IO priority. Settings live in
+`/etc/videoscroll-backup.env`. Each run:
+
+- **mirrors** `videos/`, `posters/` and `meta/` to
+  `/mnt/videoscroll-backup/videoscroll/`. Deletions reach the backup only on
+  Sundays, so a video deleted by mistake stays recoverable for up to a week.
+- **snapshots** `data/` (accounts, invites, session secret) as dated tarballs,
+  keeping 30. They are mode 600 because they contain password hashes and the
+  signing key.
+- **records** `last-success`. `doctor` warns when it is older than 48 hours.
+
+```bash
+sudo systemctl start videoscroll-backup      # run now
+journalctl -u videoscroll-backup             # what happened
+systemctl list-timers videoscroll-backup     # when it runs next
+```
+
+### Restoring
+
+Practice this once before launch, then quarterly. A restore drill that
+touches nothing live:
+
+```bash
+B=/mnt/videoscroll-backup/videoscroll
+T=$(mktemp -d)
+sudo cp -r "$B"/videos "$B"/posters "$B"/meta "$T"/
+sudo tar -xzf "$(ls -1t "$B"/data-snapshots/*.tar.gz | head -1)" -C "$T"
+sudo chown -R videoscroll: "$T"
+sudo -u videoscroll env MEDIA_DIR="$T" PORT=3999 ALLOWED_ORIGINS=http://localhost \
+  /opt/videoscroll/videoscroll serve -env-file /dev/null &
+curl -s localhost:3999/api/health        # {"ok":true}; the log lists the video count
+kill %1 && sudo rm -rf "$T"
+```
+
+**For a real restore** onto a new disk: stop `videoscroll`, copy the same
+folders plus the extracted `data/` into `/srv/videoscroll`, run
+`chown -R videoscroll:`, and start it again. Accounts and sign-ins carry
+over, because the snapshot includes the session secret.
 
 **If the machine is off:** members see "Can't reach the server". Nothing is
 lost, and the app retries on its own.
@@ -349,8 +423,15 @@ lost, and the app retries on its own.
   password, role or disabled state, or using "sign out everywhere", bumps the
   version and kills every outstanding token at once.
 - **Passwords** are hashed with argon2id (19 MiB, t=2). At most two hashes run
-  concurrently, so login floods cannot exhaust RAM. Login attempts are
-  rate-limited per IP and per username.
+  concurrently, so login floods cannot exhaust RAM.
+- **Login limits count failures only:**
+  - 10 per address and account
+  - 20 per address
+  - 200 per account, a backstop against guessing spread over many addresses
+
+  All three reset every 15 minutes. Someone guessing at your username
+  exhausts their own budget but cannot lock you out from your own
+  connection.
 - **Invite codes** have 128 bits of entropy, are single-use, expire, and are
   stored only as SHA-256 hashes.
 - **Media files** are opened through Go's `os.Root`, so no id can escape

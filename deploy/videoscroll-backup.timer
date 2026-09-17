@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly videoscroll backup
+
+[Timer]
+OnCalendar=*-*-* 03:30
+RandomizedDelaySec=10min
+# Catch up after the machine was off at 03:30.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

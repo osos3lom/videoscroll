@@ -39,7 +39,7 @@ server/                 Go module
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
   internal/jobs         uploads + persistent single-worker queue
   internal/httpapi      routes, CORS, handlers
-deploy/                 Caddyfile, systemd unit, install.sh, DuckDNS timer
+deploy/                 Caddyfile, systemd units, install.sh (+ --rollback), backup.sh + timer, DuckDNS timer
 docs/self-hosting.md    setup and operations guide
 ```
 

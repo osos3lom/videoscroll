@@ -1,0 +1,18 @@
+# Nightly backup of /srv/videoscroll to the USB disk. Started by
+# videoscroll-backup.timer; run by hand with:
+#   sudo systemctl start videoscroll-backup && journalctl -u videoscroll-backup
+#
+# Runs as root: data/ is readable only by the videoscroll user, and the backup
+# disk may be owned by anyone.
+
+[Unit]
+Description=videoscroll backup to USB disk
+RequiresMountsFor=/srv/videoscroll
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/videoscroll-backup.env
+ExecStart=/opt/videoscroll/backup.sh
+# Never compete with streaming for CPU or disk.
+Nice=19
+IOSchedulingClass=idle

@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Files that run on the Linux PC keep LF even in a Windows checkout, so
+# copying them over (instead of cloning there) cannot break bash or systemd.
+*.sh text eol=lf
+deploy/** text eol=lf
