@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import useSWR from 'swr'
+import { useDialog } from '../hooks/useDialog'
 import VideoCard from '../components/videoCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useSession, useSessionActions } from '../hooks/useSession'
@@ -21,6 +22,7 @@ const ProfilePage = () => {
     const { logout, logoutEverywhere, changePassword } = useSessionActions()
     const { videos, social: serverSocial, isDemo } = useVideos()
     const [social] = useSocialStorage(serverSocial)
+    const dialog = useDialog()
 
     const [showPassword, setShowPassword] = useState(false)
     const [currentPassword, setCurrentPassword] = useState('')
@@ -71,7 +73,13 @@ const ProfilePage = () => {
     }
 
     const deleteVideo = async (videoId: string, title: string) => {
-        if (!window.confirm(`هل تريد بالتأكيد حذف “${title}” للجميع؟ لا يمكن التراجع عن هذا الإجراء.`)) return
+        const confirmed = await dialog.confirm({
+            title: 'حذف الفيديو؟',
+            message: `سيُحذف «${title}» للجميع، ولا يمكن التراجع عن ذلك.`,
+            confirmLabel: 'حذف',
+            danger: true,
+        })
+        if (!confirmed) return
         try {
             await apiFetch(`/api/videos/${videoId}`, { method: 'DELETE' })
             window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
@@ -81,7 +89,13 @@ const ProfilePage = () => {
     }
 
     const renameVideo = async (videoId: string, title: string) => {
-        const next = window.prompt('عنوان جديد', title)
+        const next = await dialog.prompt({
+            title: 'تعديل اسم الفيديو',
+            label: 'العنوان',
+            initial: title,
+            confirmLabel: 'حفظ',
+            maxLength: 120,
+        })
         if (next === null || next.trim() === '' || next.trim() === title) return
         try {
             await apiFetch(`/api/videos/${videoId}`, { method: 'PATCH', json: { title: next.trim() } })
@@ -95,6 +109,7 @@ const ProfilePage = () => {
 
     return (
         <div className={styles.container}>
+            {dialog.element}
             <header className={styles.profileHeader}>
                 <div className={styles.profileHeader__avatar}>
                     <div className={styles.profileHeader__avatarInner}>{name.charAt(0).toUpperCase()}</div>

@@ -1,0 +1,99 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.dialog {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 20px;
+    border-radius: 18px;
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+}
+
+.title {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.message {
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.75);
+    overflow-wrap: anywhere;
+}
+
+.label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 1.3rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-family: inherit;
+    /* 16px or more: iOS zooms into smaller inputs. */
+    font-size: 1.6rem;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #01feff;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.button {
+    flex: 1;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.primary {
+    background: #ffffff;
+    color: #000000;
+}
+
+.danger {
+    background: #d6406a;
+    border-color: #d6406a;
+}

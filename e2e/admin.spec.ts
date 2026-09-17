@@ -79,8 +79,8 @@ test('owner adds a member by phone number; they must choose a password at first 
     await expect(memberPage.getByRole('heading', { name: 'اختر كلمة المرور الخاصة بك' })).toBeVisible()
 
     // --- And finally removes the account.
-    ownerPage.once('dialog', (dialog) => dialog.accept())
     await memberRow(ownerPage, '+966501234567').getByRole('button', { name: 'حذف' }).click()
+    await ownerPage.getByRole('dialog', { name: 'حذف الحساب؟' }).getByRole('button', { name: 'حذف' }).click()
     await expect(memberRow(ownerPage, '+966501234567')).toHaveCount(0)
     const gone = await apiFetch('/api/auth/login', {
         method: 'POST',
@@ -115,18 +115,42 @@ test('the owner renames and deletes any video from the profile page', async ({ b
     await expect(page.getByRole('heading', { name: /^جميع الفيديوهات \(\d+\)$/ })).toBeVisible()
 
     // Rename.
-    page.once('dialog', (dialog) => dialog.accept('Going away soon'))
     await page.getByRole('button', { name: 'تعديل اسم to-be-deleted' }).click()
+    const renameDialog = page.getByRole('dialog', { name: 'تعديل اسم الفيديو' })
+    await renameDialog.getByLabel('العنوان').fill('Going away soon')
+    await renameDialog.getByRole('button', { name: 'حفظ' }).click()
+    await expect(renameDialog).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Going away soon' })).toBeVisible()
     const list = await apiFetch<VideosResponse>('/api/videos', { token: ownerToken() })
     expect(list.body.data.some((v) => v.title === 'Going away soon')).toBe(true)
 
     // Delete.
-    page.once('dialog', (dialog) => dialog.accept())
+    // Cancel first: nothing happens.
     await page.getByRole('button', { name: 'حذف Going away soon' }).click()
+    await page.getByRole('dialog', { name: 'حذف الفيديو؟' }).getByRole('button', { name: 'إلغاء' }).click()
+    await expect(page.getByRole('heading', { name: 'Going away soon' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'حذف Going away soon' }).click()
+    await page.getByRole('dialog', { name: 'حذف الفيديو؟' }).getByRole('button', { name: 'حذف', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Going away soon' })).toHaveCount(0)
     const after = await apiFetch<VideosResponse>('/api/videos', { token: ownerToken() })
     expect(after.body.data.some((v) => v.title === 'Going away soon')).toBe(false)
+
+    await owner.close()
+})
+
+test('the admin page scrolls on a phone', async ({ browser }) => {
+    const owner = await browser.newContext({ storageState: OWNER_STATE, viewport: { width: 390, height: 844 } })
+    const page = await owner.newPage()
+    await page.goto('admin')
+    await expect(page.getByRole('heading', { name: 'إضافة عضو' })).toBeVisible()
+
+    // The layout clips to the viewport, so a wheel/swipe must move the page's own scroller.
+    await page.mouse.move(195, 400)
+    await page.mouse.wheel(0, 2000)
+    await expect
+        .poll(() => page.evaluate(() => Math.max(...[...document.querySelectorAll('*')].map((el) => el.scrollTop))))
+        .toBeGreaterThan(0)
 
     await owner.close()
 })

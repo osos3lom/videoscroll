@@ -117,6 +117,11 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
   community stays on a shared device.
 - **Wire types are mirrored by hand.** Each interface in `src/types/api.ts`
   names its Go struct; change both together.
+- **No `window.confirm`/`prompt`/`alert`.** Embedded browsers and some
+  installed web apps block them, and a blocked confirm reads as "cancel".
+  Use `useDialog` (`src/hooks/useDialog.tsx`).
+- **Pages scroll themselves.** The layout clips to the viewport, so a
+  page's root needs `height: 100%` and `overflow-y: auto`.
 - **Overlays need `createPortal`.** `.navbar` has both a `transform` and a
   `backdrop-filter`, either of which makes it the containing block for
   `position: fixed` descendants.

@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import useSWR from 'swr'
+import { useDialog } from '../hooks/useDialog'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useSession } from '../hooks/useSession'
 import { accountMessage, generateTemporaryPassword, loginHint } from '../lib/accounts'
@@ -96,6 +97,7 @@ const AdminPage = () => {
 
     const [error, setError] = useState<string | null>(null)
     const [share, setShare] = useState<string | null>(null)
+    const dialog = useDialog()
 
     // Add-member form
     const [phone, setPhone] = useState('')
@@ -167,17 +169,27 @@ const AdminPage = () => {
             await members.mutate()
         })
 
-    const renameUser = (user: PublicUser) => {
-        const next = window.prompt(`الاسم الجديد لحساب ${loginHint(user.username)}`, user.displayName)
-        if (next !== null && next.trim() !== '' && next !== user.displayName) {
-            void updateUser(user.id, { displayName: next })
+    const renameUser = async (user: PublicUser) => {
+        const next = await dialog.prompt({
+            title: `تعديل اسم ${loginHint(user.username)}`,
+            label: 'الاسم',
+            initial: user.displayName,
+            confirmLabel: 'حفظ',
+            maxLength: 48,
+        })
+        if (next !== null && next.trim() !== '' && next.trim() !== user.displayName) {
+            void updateUser(user.id, { displayName: next.trim() })
         }
     }
 
-    const deleteUser = (user: PublicUser) => {
-        if (!window.confirm(`هل تريد بالتأكيد حذف حساب ${user.displayName} (${loginHint(user.username)})؟ ستبقى فيديوهاته كما هي.`)) {
-            return
-        }
+    const deleteUser = async (user: PublicUser) => {
+        const confirmed = await dialog.confirm({
+            title: 'حذف الحساب؟',
+            message: `سيُحذف حساب ${user.displayName} (${loginHint(user.username)}). ستبقى فيديوهاته كما هي.`,
+            confirmLabel: 'حذف',
+            danger: true,
+        })
+        if (!confirmed) return
         void run(async () => {
             await apiFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
             await members.mutate()
@@ -227,6 +239,7 @@ const AdminPage = () => {
 
     return (
         <div className={styles.page}>
+            {dialog.element}
             <header className={styles.header}>
                 <Link to="/profile" className={styles.back}>
                     → الملف الشخصي
@@ -319,7 +332,7 @@ const AdminPage = () => {
                                             </option>
                                         ))}
                                     </select>
-                                    <button type="button" onClick={() => renameUser(user)}>
+                                    <button type="button" onClick={() => void renameUser(user)}>
                                         تعديل الاسم
                                     </button>
                                     {!isSelf && (
@@ -345,7 +358,7 @@ const AdminPage = () => {
                                             <button
                                                 type="button"
                                                 className={styles.danger}
-                                                onClick={() => deleteUser(user)}
+                                                onClick={() => void deleteUser(user)}
                                             >
                                                 حذف
                                             </button>

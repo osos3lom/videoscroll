@@ -1,7 +1,15 @@
+/*
+ * The layout clips its content to the viewport, so the page scrolls itself.
+ * The scroller is full width (so a swipe anywhere scrolls); the side padding
+ * centres a 688px column on wide screens.
+ */
 .page {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 24px 16px calc(110px + env(safe-area-inset-bottom, 0px));
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, calc((100% - 688px) / 2))
+        calc(110px + env(safe-area-inset-bottom, 0px));
     color: #ffffff;
     font-size: 1.4rem;
 }
