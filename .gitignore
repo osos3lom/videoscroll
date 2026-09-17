@@ -8,9 +8,10 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# build output
+/dist/
+/dist-local/
+/dist-server/
 
 # production
 /build
@@ -34,18 +35,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# PWA files
-**/public/sw.js
-**/public/workbox-*.js
-**/public/worker-*.js
-**/public/sw.js.map
-**/public/workbox-*.js.map
-**/public/worker-*.js.map
-
-# serwist (generated service worker)
-public/sw.js
-public/sw.js.map
-public/swe-worker-*.js
-
-# local social data (likes/bookmarks)
+# server-side media + state (lives on the big disk in production)
 /data/
+/posters/
+
+# server secrets (never commit)
+.env.server
+
+# local development media root (MEDIA_DIR default)
+/media/
+
+# local production simulation and e2e state
+/.sim/
+/.sim-e2e/
+/test-results/
+/playwright-report/

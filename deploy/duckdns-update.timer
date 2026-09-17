@@ -1,0 +1,11 @@
+[Unit]
+Description=Update DuckDNS record every 5 minutes
+
+[Timer]
+# Run shortly after boot too, so a reboot on a new IP is corrected quickly.
+OnBootSec=1min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

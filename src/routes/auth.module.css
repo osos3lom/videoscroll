@@ -1,0 +1,112 @@
+.page {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(circle at 30% 20%, #1b1b2b 0%, #000000 70%);
+}
+
+.panel {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 28px 24px;
+    border-radius: 18px;
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.brand {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #01feff;
+}
+
+.title {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.hint {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 1.6rem;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #01feff;
+}
+
+.error {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #ff7a9c;
+}
+
+.success {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #7affc4;
+}
+
+.button {
+    padding: 12px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: transparent;
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.button_primary {
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+}
+
+.footnote {
+    margin: 4px 0 0;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+}
+
+.footnote a {
+    color: #01feff;
+}

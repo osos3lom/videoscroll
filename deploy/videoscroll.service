@@ -1,0 +1,53 @@
+# systemd unit for the videoscroll API (a single Go binary).
+#
+# deploy/install.sh installs this. By hand:
+#   sudo cp deploy/videoscroll.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now videoscroll
+#
+# Note there is deliberately no MemoryMax= and no Nice=. ffmpeg runs as a child
+# of this process and shares its cgroup, so a memory cap here would count the
+# encoder against the server and could get the server OOM-killed instead of the
+# encode. ffmpeg is de-prioritised (nice 19, idle IO class) at spawn instead.
+
+[Unit]
+Description=videoscroll API and media server
+After=network-online.target
+Wants=network-online.target
+# Media lives on the big disk; wait for it rather than writing to the root fs.
+RequiresMountsFor=/srv/videoscroll
+
+[Service]
+Type=simple
+User=videoscroll
+Group=videoscroll
+WorkingDirectory=/opt/videoscroll
+EnvironmentFile=/etc/videoscroll.env
+ExecStart=/opt/videoscroll/videoscroll serve -env-file /etc/videoscroll.env
+Restart=always
+RestartSec=5
+# Gives an in-progress ffmpeg run time to be killed cleanly; the job resumes on
+# the next start.
+TimeoutStopSec=20
+
+# Each streamed video holds a file descriptor.
+LimitNOFILE=8192
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+# The media directory is the only path this service writes.
+ReadWritePaths=/srv/videoscroll
+# (VAAPI hardware encoding needs the render/video groups; install.sh adds the
+# user to whichever exist. SupplementaryGroups= here would fail the unit on a
+# machine without them.)
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=videoscroll
+
+[Install]
+WantedBy=multi-user.target

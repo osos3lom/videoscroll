@@ -1,4 +1,4 @@
-name: Deploy Next.js site to GitHub Pages
+name: Deploy static site to GitHub Pages
 
 on:
   push:
@@ -19,60 +19,53 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Detect package manager
-        id: detect-package-manager
-        run: |
-          if [ -f "${{ github.workspace }}/package-lock.json" ]; then
-            echo "manager=npm" >> $GITHUB_OUTPUT
-            echo "command=ci" >> $GITHUB_OUTPUT
-            echo "runner=npx --no-install" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            echo "Unable to determine package manager"
-            exit 1
-          fi
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: ${{ steps.detect-package-manager.outputs.manager }}
+          cache: npm
 
       - name: Setup GitHub Pages configuration
         id: pages
         uses: actions/configure-pages@v5
 
       - name: Install dependencies
-        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+        run: npm ci
 
-      - name: Prepare demo videos
-        run: |
-          mkdir -p public/videos
-          if [ -d "videos" ]; then
-            cp -rn videos/* public/videos/ 2>/dev/null || true
-          fi
+      - name: Typecheck
+        run: npm run typecheck
 
-      - name: Build Next.js static site
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+      - name: Lint
+        run: npm run lint
+
+      - name: Build static site
+        run: npx vite build --mode pages --base="${{ steps.pages.outputs.base_path }}/"
         env:
-          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          # HTTPS origin of the self-hosted API. With it set, the site is the
+          # private app (sign-in required, service worker included); unset, it
+          # is a demo that plays the bundled reels. Vite reads prefixed env vars
+          # after .env.pages, so this wins when it is set.
+          VITE_API_ORIGIN: ${{ vars.VITE_API_ORIGIN }}
 
-      - name: Build Serwist Service Worker
-        run: ${{ steps.detect-package-manager.outputs.runner }} serwist build serwist.config.mjs
+      - name: Add SPA fallback and disable Jekyll
+        run: |
+          # GitHub Pages has no server-side rewrite, so a deep link such as
+          # /videoscroll/likes has no file to serve. Pages falls back to
+          # 404.html, from which the client router resolves the path.
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
 
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out
+          path: ./dist
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages

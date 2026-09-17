@@ -1,13 +1,16 @@
 import { FC, JSX, useRef, useState, useEffect } from 'react'
-import Link from 'next/link'
+import { MdDeleteOutline } from 'react-icons/md'
+import { Link } from 'react-router'
 import type { LocalVideo } from '../../types/video'
 import styles from './videoCard.module.css'
 
 export interface IVideoCardProps {
     video: LocalVideo
+    /** Shown as a delete button when the viewer may delete this video. */
+    onDelete?: () => void
 }
 
-const VideoCard: FC<IVideoCardProps> = ({ video }): JSX.Element => {
+const VideoCard: FC<IVideoCardProps> = ({ video, onDelete }): JSX.Element => {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [progress, setProgress] = useState(0)
 
@@ -56,7 +59,7 @@ const VideoCard: FC<IVideoCardProps> = ({ video }): JSX.Element => {
     }, [])
 
     return (
-        <Link href={`/#${video.videoId}`} className={styles.card} passHref>
+        <Link to={`/#${video.videoId}`} className={styles.card}>
             <div
                 className={styles.card__container}
                 onMouseEnter={handleMouseEnter}
@@ -66,10 +69,11 @@ const VideoCard: FC<IVideoCardProps> = ({ video }): JSX.Element => {
                     ref={videoRef}
                     className={styles.card__video}
                     src={`${video.src}#t=0.1`}
-                    poster={`/api/poster/${video.videoId}`}
+                    poster={video.poster}
                     loop
                     muted
                     preload="none"
+                    crossOrigin="anonymous"
                     onTimeUpdate={handleTimeUpdate}
                 />
 
@@ -80,6 +84,22 @@ const VideoCard: FC<IVideoCardProps> = ({ video }): JSX.Element => {
                     </h3>
                     <span className={styles.card__size}>{formatSize(video.size)}</span>
                 </div>
+
+                {onDelete && (
+                    <button
+                        type="button"
+                        className={styles.card__delete}
+                        aria-label={`Delete ${video.title}`}
+                        onClick={(event) => {
+                            // Inside the card's link: don't navigate.
+                            event.preventDefault()
+                            event.stopPropagation()
+                            onDelete()
+                        }}
+                    >
+                        <MdDeleteOutline size={18} />
+                    </button>
+                )}
 
                 {/* Real-time playback progress bar */}
                 <div className={styles.card__progressBar}>

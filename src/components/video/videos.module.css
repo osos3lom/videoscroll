@@ -19,6 +19,32 @@
     object-fit: cover;
     display: block;
     pointer-events: none;
+    z-index: 1;
+}
+
+.video__element_horizontal {
+    object-fit: contain;
+}
+
+.video__element_fill {
+    object-fit: cover;
+}
+
+/* Ambient glow filling the letterbox area with the video's colors */
+.video__ambient {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    filter: blur(36px) brightness(0.35) saturate(1.4);
+    transform: scale(1.15);
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* Full-bleed tap target for play/pause. */
@@ -61,4 +87,41 @@
 .video__mute:focus-visible {
     outline: 2px solid #ffffff;
     outline-offset: 2px;
+}
+
+.video__topControls {
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 20;
+}
+
+.video__pillButton {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 18px;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.video__pillButton:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.04);
+}
+
+.video__pillButton:active {
+    transform: scale(0.96);
 }

@@ -9,6 +9,14 @@
     flex-direction: column;
     gap: 20px;
     z-index: 10;
+    transition: bottom 0.25s ease, top 0.25s ease, transform 0.25s ease;
+}
+
+.sidebar_horizontal {
+    top: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    gap: 14px;
 }
 
 .sidebar__button {

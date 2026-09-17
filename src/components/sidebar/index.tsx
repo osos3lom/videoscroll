@@ -11,9 +11,10 @@ export interface ISidebarProps {
     video: LocalVideo
     social?: VideoSocial
     onSocialChange: (videoId: string, social: VideoSocial) => void
+    isHorizontal?: boolean
 }
 
-const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange }): JSX.Element => {
+const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange, isHorizontal = false }): JSX.Element => {
     const likes = getSocialResults(social, 'likes')
     const bookmarks = getSocialResults(social, 'bookmarks')
 
@@ -31,7 +32,7 @@ const Sidebar: FC<ISidebarProps> = ({ video, social, onSocialChange }): JSX.Elem
     }
 
     return (
-        <div className={styles.sidebar}>
+        <div className={`${styles.sidebar} ${isHorizontal ? styles.sidebar_horizontal : ''}`}>
             <button
                 type="button"
                 className={styles.sidebar__button}

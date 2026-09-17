@@ -1,19 +1,14 @@
-# Drop your videos here
+# Demo clips
 
-Copy any video files into this folder and they show up in the feed.
+`clip1.mp4`–`clip3.mp4` are the reels the GitHub Pages build plays when no
+server is configured (`VITE_API_ORIGIN` unset). The build copies them into the
+bundle.
 
-    videos/
-      my-clip.mp4
-      another.webm
+This is **not** where community videos live. The server keeps those under
+`MEDIA_DIR` (e.g. `/srv/videoscroll/videos/`). To add videos, either:
 
-Supported: `.mp4` `.webm` `.ogg` `.ogv` `.mov` `.m4v`
+- use the **+** button in the app, or
+- copy files into `MEDIA_DIR/inbox/`, or run `videoscroll import <files…>`.
 
-Notes:
-
-- **`.mp4` (H.264 + AAC) is the safest bet.** `.mov` and some `.mp4` files use codecs
-  browsers can't decode — if a video shows a black frame, re-encode it:
-  `ffmpeg -i input.mov -c:v libx264 -c:a aac -movflags +faststart output.mp4`
-- Vertical (9:16) footage looks best, but anything works — video is `object-fit: cover`.
-- The feed sorts by filename. Prefix with numbers (`01-`, `02-`) to control order.
-- Files are served by the app itself with HTTP range support, so seeking works.
-- Nothing here is committed to git, and nothing leaves your machine.
+Both routes go through the same pipeline: kept as-is when browser-playable,
+remuxed for fast start when needed. See `docs/self-hosting.md`.

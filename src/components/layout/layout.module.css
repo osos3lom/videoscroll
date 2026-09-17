@@ -95,3 +95,13 @@
         background-position: 0;
     }
 }
+
+/*
+ * Determinate progress for the upload itself. The indeterminate shimmer above
+ * stays for the server-side processing phase, where there is nothing to measure.
+ */
+.toast__progressbarKnown {
+    height: 100%;
+    background: #01feff;
+    transition: width 0.2s ease-out;
+}

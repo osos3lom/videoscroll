@@ -1,0 +1,57 @@
+# Caddy config for the videoscroll API on the home machine.
+#
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Replace the hostname with your own (e.g. a DuckDNS name). Caddy obtains and
+# renews the certificate automatically; that needs inbound port 80 (HTTP-01)
+# or 443 (TLS-ALPN-01) reachable from the internet. See docs/self-hosting.md
+# for what to do if your connection is behind CGNAT.
+#
+# The frontend is on GitHub Pages, so this site serves the API only.
+
+videoscroll.duckdns.org {
+	# Uploads arrive in 8 MiB chunks, so no request body is ever large. A tight
+	# cap here stops anyone from streaming gigabytes at the app.
+	request_body {
+		max_size 20MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:3000 {
+		# Stream responses as they are produced. Without this, Caddy buffers
+		# and byte-range video playback stalls.
+		flush_interval -1
+	}
+
+	encode {
+		gzip
+		# Video and images are already compressed; recompressing them would
+		# spend CPU this machine does not have.
+		match {
+			header Content-Type application/json*
+		}
+	}
+
+	log {
+		output file /var/log/caddy/videoscroll.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+		# Media URLs carry a token as ?t=. It is short-lived, but it still has
+		# no business in a log file. (Authorization headers are redacted by
+		# Caddy by default.)
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete t
+				}
+			}
+		}
+	}
+}

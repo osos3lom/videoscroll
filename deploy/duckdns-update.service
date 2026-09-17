@@ -1,0 +1,19 @@
+# Keeps the DuckDNS record pointed at this machine's current public IP.
+#
+#   sudo cp deploy/duckdns-update.* /etc/systemd/system/
+#   sudo systemctl enable --now duckdns-update.timer
+#
+# Expects /etc/duckdns.env (chmod 600) containing:
+#   DUCKDNS_DOMAIN=videoscroll
+#   DUCKDNS_TOKEN=<your token>
+
+[Unit]
+Description=Update DuckDNS record
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/duckdns.env
+ExecStart=/usr/bin/curl -fsS --retry 3 -o /dev/null \
+    "https://www.duckdns.org/update?domains=${DUCKDNS_DOMAIN}&token=${DUCKDNS_TOKEN}&ip="

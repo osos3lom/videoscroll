@@ -1,0 +1,117 @@
+/* The navbar's centre "+" button. */
+.addButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 10px;
+    transition: transform 0.15s ease;
+}
+
+.addButton:hover {
+    transform: scale(1.08);
+}
+
+.addButton:active {
+    transform: scale(0.95);
+}
+
+.addButton:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.addIconWrapper {
+    background-color: #ffffff;
+    width: 42px;
+    height: 26px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 0;
+    /* TikTok style double shadows styling */
+    filter: drop-shadow(3px 0px 0px #fd3e3e) drop-shadow(-3px 0px 0px #4de8f4);
+    transition: filter 0.2s ease;
+}
+
+.addButton:hover .addIconWrapper {
+    filter: drop-shadow(4px 0px 0px #fd3e3e) drop-shadow(-4px 0px 0px #4de8f4);
+}
+
+.toast {
+    position: fixed;
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 12px 20px;
+    border-radius: 16px;
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    max-width: 90vw;
+}
+
+.toast_error {
+    background: rgba(214, 80, 118, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.toast__spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: upload-spinner 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+.toast__cancel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.toast__progressbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.toast__progressbarFill {
+    height: 100%;
+    background: #01feff;
+    transition: width 0.2s ease-out;
+}
+
+@keyframes upload-spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}

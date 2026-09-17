@@ -1,0 +1,151 @@
+.page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 16px calc(110px + env(safe-area-inset-bottom, 0px));
+    color: #ffffff;
+    font-size: 1.4rem;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 2.4rem;
+}
+
+.back {
+    color: #01feff;
+    text-decoration: none;
+    font-size: 1.3rem;
+}
+
+.section {
+    margin-bottom: 28px;
+    padding: 18px;
+    border-radius: 16px;
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section h2 {
+    margin: 0 0 14px;
+    font-size: 1.7rem;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+.stats dt {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.stats dd {
+    margin: 4px 0 0;
+    font-size: 1.7rem;
+    font-weight: 600;
+}
+
+.warn dd {
+    color: #ffb86b;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.page select,
+.page button {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+    font-size: 1.3rem;
+    cursor: pointer;
+}
+
+.page select option {
+    color: #000000;
+}
+
+.page button.primary {
+    background: #ffffff;
+    color: #000000;
+    font-weight: 600;
+}
+
+.linkBox {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.linkBox code {
+    flex: 1 1 260px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(1, 254, 255, 0.08);
+    color: #01feff;
+    font-size: 1.2rem;
+    word-break: break-all;
+}
+
+.list {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.list li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.list em {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: normal;
+}
+
+.disabled span {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.muted {
+    margin: 6px 0 0;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.2rem;
+    width: 100%;
+}
+
+.error {
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(214, 80, 118, 0.25);
+    color: #ffb3c7;
+}

@@ -1,6 +1,7 @@
-import { FC, ReactNode, useRef, useState } from 'react'
-import { addLocalVideo } from '../../lib/videoStore'
+import type { FC, ReactNode } from 'react'
+import { useSession } from '../../hooks/useSession'
 import Navbar from '../navbar'
+import Upload from '../upload'
 import styles from './layout.module.css'
 
 interface ILayoutProps {
@@ -8,106 +9,15 @@ interface ILayoutProps {
 }
 
 const Layout: FC<ILayoutProps> = ({ children }) => {
-    const inputFileRef = useRef<HTMLInputElement | null>(null)
-    const [isUploading, setIsUploading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
-
-    const handleUploadClick = () => {
-        if (isUploading) return
-        setError(null)
-        inputFileRef.current?.click()
-    }
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
-        if (!file) return
-
-        setIsUploading(true)
-        setError(null)
-
-        try {
-            // First attempt server-side upload so video streams without consuming mobile memory
-            let uploaded = false
-            try {
-                const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
-                const response = await fetch(`${basePath}/api/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'x-filename': encodeURIComponent(file.name),
-                        'Content-Type': file.type || 'application/octet-stream',
-                    },
-                    body: file,
-                })
-                if (response.ok) {
-                    uploaded = true
-                    window.dispatchEvent(new Event('videoscroll_local_video_update'))
-                    // Reload window or fetch dynamic server list
-                    window.location.reload()
-                }
-            } catch (apiErr) {
-                console.error('[upload] server upload unavailable, falling back to local store', apiErr)
-            }
-
-            if (!uploaded) {
-                // Fallback to IndexedDB if offline or server API route is unavailable
-                await addLocalVideo(file)
-            }
-        } catch (caught) {
-            const isQuotaError = caught instanceof DOMException && caught.name === 'QuotaExceededError'
-            const message = isQuotaError
-                ? 'Not enough storage space left in this browser for that video'
-                : caught instanceof Error
-                  ? caught.message
-                  : 'Upload failed'
-            setError(message)
-            // Auto clear error toast after 4 seconds
-            setTimeout(() => {
-                setError(null)
-            }, 4000)
-            console.error('[global upload]', caught)
-        } finally {
-            setIsUploading(false)
-            if (inputFileRef.current) {
-                inputFileRef.current.value = ''
-            }
-        }
-    }
+    const role = useSession()?.user.role
+    const canUpload = role === 'owner' || role === 'uploader'
 
     return (
         <div className={styles.layout}>
-            {/* Page content */}
             <div className={styles.layout__content}>{children}</div>
 
-            {/* Hidden Input for Global Upload */}
-            <input
-                type="file"
-                id="global-upload"
-                ref={inputFileRef}
-                name="global-upload"
-                accept="video/*"
-                onChange={handleFileChange}
-                style={{ display: 'none' }}
-            />
-
-            {/* Global upload state banners */}
-            {isUploading && (
-                <div className={styles.toast}>
-                    <div className={styles.toast__spinner} />
-                    <span>Uploading your video...</span>
-                    <div className={styles.toast__progressbar}>
-                        <div className={styles.toast__progressbarFill} />
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div className={`${styles.toast} ${styles.toast_error}`}>
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {/* Shared bottom navbar */}
-            <Navbar onUploadClick={handleUploadClick} />
+            {/* The server enforces the same rule; this only hides a button that would 403. */}
+            <Navbar uploadSlot={canUpload ? <Upload /> : null} />
         </div>
     )
 }

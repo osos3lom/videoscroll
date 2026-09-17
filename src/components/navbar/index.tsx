@@ -1,6 +1,5 @@
-import { FC, JSX } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/router'
+import type { FC, JSX, ReactNode } from 'react'
+import { Link, useLocation } from 'react-router'
 import {
     MdHome,
     MdOutlineHome,
@@ -10,17 +9,19 @@ import {
     MdBookmarkBorder,
     MdPerson,
     MdOutlinePerson,
-    MdAdd,
 } from 'react-icons/md'
 import styles from './navbar.module.css'
 
 interface INavbarProps {
-    onUploadClick: () => void
+    /**
+     * Rendered in the centre position. Null in the public build, which has no
+     * upload capability at all.
+     */
+    uploadSlot?: ReactNode
 }
 
-const Navbar: FC<INavbarProps> = ({ onUploadClick }): JSX.Element => {
-    const router = useRouter()
-    const currentPath = router.pathname
+const Navbar: FC<INavbarProps> = ({ uploadSlot = null }): JSX.Element => {
+    const currentPath = useLocation().pathname
 
     const isFeedActive = currentPath === '/'
     const isLikesActive = currentPath === '/likes'
@@ -31,7 +32,7 @@ const Navbar: FC<INavbarProps> = ({ onUploadClick }): JSX.Element => {
         <nav className={styles.navbar}>
             <div className={styles.navbar__container}>
                 {/* Feed Tab */}
-                <Link href="/" className={styles.navbar__item} aria-label="Feed">
+                <Link to="/" className={styles.navbar__item} aria-label="Feed">
                     {isFeedActive ? (
                         <MdHome size={28} className={styles.navbar__icon_active} />
                     ) : (
@@ -43,7 +44,7 @@ const Navbar: FC<INavbarProps> = ({ onUploadClick }): JSX.Element => {
                 </Link>
 
                 {/* Likes Tab */}
-                <Link href="/likes" className={styles.navbar__item} aria-label="Likes">
+                <Link to="/likes" className={styles.navbar__item} aria-label="Likes">
                     {isLikesActive ? (
                         <MdFavorite size={26} className={styles.navbar__icon_active} />
                     ) : (
@@ -54,20 +55,10 @@ const Navbar: FC<INavbarProps> = ({ onUploadClick }): JSX.Element => {
                     </span>
                 </Link>
 
-                {/* Add/Upload Button */}
-                <button
-                    type="button"
-                    className={styles.navbar__addButton}
-                    onClick={onUploadClick}
-                    aria-label="Upload Video"
-                >
-                    <div className={styles.navbar__addIconWrapper}>
-                        <MdAdd size={28} color="#000" />
-                    </div>
-                </button>
+                {uploadSlot}
 
                 {/* Saved Tab */}
-                <Link href="/saved" className={styles.navbar__item} aria-label="Saved">
+                <Link to="/saved" className={styles.navbar__item} aria-label="Saved">
                     {isSavedActive ? (
                         <MdBookmark size={26} className={styles.navbar__icon_active} />
                     ) : (
@@ -79,7 +70,7 @@ const Navbar: FC<INavbarProps> = ({ onUploadClick }): JSX.Element => {
                 </Link>
 
                 {/* Profile Tab */}
-                <Link href="/profile" className={styles.navbar__item} aria-label="Profile">
+                <Link to="/profile" className={styles.navbar__item} aria-label="Profile">
                     {isProfileActive ? (
                         <MdPerson size={26} className={styles.navbar__icon_active} />
                     ) : (
