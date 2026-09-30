@@ -17,7 +17,11 @@ const FeedPage = () => {
     const canUpload = session?.user.role === 'owner' || session?.user.role === 'uploader'
     const [social, handleSocialChange] = useSocialStorage(serverSocial)
     const containerRef = useRef<HTMLDivElement>(null)
-    const [isMuted, setIsMuted] = useState(true)
+    // Sound is on by default. Where the browser refuses to autoplay it, the
+    // video reports back and this flips to muted until the first tap.
+    const [isMuted, setIsMuted] = useState(false)
+    const isMutedRef = useRef(false)
+    const hasPickedSoundRef = useRef(false)
     const [activeIndex, setActiveIndex] = useState(0)
     const [horizontalVideos, setHorizontalVideos] = useState<Record<string, boolean>>({})
     const [isWideMode, setIsWideMode] = useState(false)
@@ -54,27 +58,57 @@ const FeedPage = () => {
         return () => container.removeEventListener('scroll', handleScroll)
     }, [])
 
-    // Unlock WebKit audio/video playback restrictions on iOS upon first user interaction
+    const applyMuted = useCallback((muted: boolean) => {
+        isMutedRef.current = muted
+        setIsMuted(muted)
+    }, [])
+
+    // The first tap or click is the user gesture that lets sound through, so it
+    // undoes the autoplay fallback. Un-mute right here inside the event: WebKit
+    // accepts it during a gesture, not from the effect that follows it.
     useEffect(() => {
-        const unlockMedia = () => {
-            const videoElements = document.querySelectorAll<HTMLVideoElement>('video')
-            videoElements.forEach((video) => {
-                if (video.muted) {
-                    video.muted = true
-                    void video.play().catch(() => undefined)
-                }
-            })
-            window.removeEventListener('touchstart', unlockMedia)
-            window.removeEventListener('click', unlockMedia)
+        const detach = () => {
+            window.removeEventListener('touchstart', unlockAudio)
+            window.removeEventListener('click', unlockAudio)
         }
 
-        window.addEventListener('touchstart', unlockMedia, { once: true, passive: true })
-        window.addEventListener('click', unlockMedia, { once: true })
-        return () => {
-            window.removeEventListener('touchstart', unlockMedia)
-            window.removeEventListener('click', unlockMedia)
+        function unlockAudio() {
+            if (hasPickedSoundRef.current || !isMutedRef.current) {
+                detach()
+                return
+            }
+
+            let unmuted = false
+            for (const video of document.querySelectorAll<HTMLVideoElement>('video')) {
+                if (video.paused) continue
+                unmuted = true
+                video.muted = false
+                video.play().catch(() => {
+                    // Still refused: a playing video beats a silent stall.
+                    video.muted = true
+                    void video.play().catch(() => undefined)
+                    applyMuted(true)
+                })
+            }
+
+            // Nothing was playing yet, so wait for the next gesture instead.
+            if (!unmuted) return
+            applyMuted(false)
+            detach()
         }
-    }, [])
+
+        window.addEventListener('touchstart', unlockAudio, { passive: true })
+        window.addEventListener('click', unlockAudio)
+        return detach
+    }, [applyMuted])
+
+    // Once someone picks, that choice sticks: no fallback or unlock overrides it.
+    const toggleMute = useCallback(() => {
+        hasPickedSoundRef.current = true
+        applyMuted(!isMutedRef.current)
+    }, [applyMuted])
+
+    const handleAutoplayBlocked = useCallback(() => applyMuted(true), [applyMuted])
 
     // Arrow keys / PageUp / PageDown / j / k page through feed, m toggles mute.
     useEffect(() => {
@@ -83,7 +117,7 @@ const FeedPage = () => {
             if (!container) return
 
             if (event.key.toLowerCase() === 'm') {
-                setIsMuted((muted) => !muted)
+                toggleMute()
                 return
             }
 
@@ -117,7 +151,7 @@ const FeedPage = () => {
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [])
+    }, [toggleMute])
 
     // Scroll to the #videoId in the URL once the list it refers to has arrived.
     const hasHandledHash = useRef(false)
@@ -135,8 +169,6 @@ const FeedPage = () => {
             targetElement.scrollIntoView({ behavior: 'auto' })
         }
     }, [videos])
-
-    const toggleMute = useCallback(() => setIsMuted((muted) => !muted), [])
 
     const handleNextVideo = useCallback(
         (currentIndex: number) => {
@@ -217,6 +249,7 @@ const FeedPage = () => {
                                 initialIsHorizontal={horizontalVideos[video.videoId]}
                                 onOrientationChange={handleOrientationChange}
                                 onToggleMute={toggleMute}
+                                onAutoplayBlocked={handleAutoplayBlocked}
                                 onSocialChange={handleSocialChange}
                                 onEnded={() => handleNextVideo(index)}
                             />

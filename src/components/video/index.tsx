@@ -1,4 +1,4 @@
-import { FC, JSX, useEffect, useRef, useState } from 'react'
+import { FC, JSX, useCallback, useEffect, useRef, useState } from 'react'
 import { MdAspectRatio, MdCropFree, MdFullscreen, MdVolumeOff, MdVolumeUp } from 'react-icons/md'
 import Footer from '../footer'
 import PlayIcon from '../playIcon'
@@ -19,6 +19,8 @@ export interface IvideosProps {
     initialIsHorizontal?: boolean
     onOrientationChange?: (videoId: string, isHorizontal: boolean) => void
     onToggleMute: () => void
+    /** Autoplay with sound was refused, so this video fell back to muted. */
+    onAutoplayBlocked?: () => void
     onSocialChange: (videoId: string, social: VideoSocial) => void
     onEnded?: () => void
 }
@@ -32,6 +34,7 @@ const VideoComponent: FC<IvideosProps> = ({
     initialIsHorizontal,
     onOrientationChange,
     onToggleMute,
+    onAutoplayBlocked,
     onSocialChange,
     onEnded,
 }): JSX.Element => {
@@ -76,6 +79,23 @@ const VideoComponent: FC<IvideosProps> = ({
         }
     }, [isMuted, isNearView])
 
+    // Browsers refuse play() on an unmuted video until the person has touched
+    // the page. Falling back to muted keeps the feed moving, and the feed flips
+    // its toggle so the button shows what is actually happening.
+    const startPlayback = useCallback(
+        (element: HTMLVideoElement) => {
+            const attempt = element.play()
+            if (attempt === undefined) return
+            attempt.catch(() => {
+                if (element.muted) return
+                element.muted = true
+                onAutoplayBlocked?.()
+                void element.play().catch(() => undefined)
+            })
+        },
+        [onAutoplayBlocked]
+    )
+
     const togglePlayback = () => setIsPausedByUser((paused) => !paused)
     const gestures = useVideoGestures(videoRef, { onTogglePlayback: togglePlayback, enabled: isInView && isNearView })
 
@@ -85,10 +105,7 @@ const VideoComponent: FC<IvideosProps> = ({
 
         if (isInView && !isPausedByUser) {
             element.muted = isMuted
-            const playPromise = element.play()
-            if (playPromise !== undefined) {
-                playPromise.catch(() => undefined)
-            }
+            startPlayback(element)
             return
         }
 
@@ -96,14 +113,14 @@ const VideoComponent: FC<IvideosProps> = ({
         if (!isInView) {
             element.currentTime = 0
         }
-    }, [isInView, isPausedByUser, isMuted])
+    }, [isInView, isPausedByUser, isMuted, startPlayback])
 
 
     const handleCanPlay = () => {
         const element = videoRef.current
         if (element && isInView && !isPausedByUser && !gestures.isScrubbing()) {
             element.muted = isMuted
-            void element.play().catch(() => undefined)
+            startPlayback(element)
         }
     }
 
@@ -206,11 +223,19 @@ const VideoComponent: FC<IvideosProps> = ({
 
             <button
                 type="button"
-                className={styles.video__mute}
+                className={`${styles.video__mute} ${isMuted ? styles.video__mute_muted : ''}`}
                 onClick={onToggleMute}
-                aria-label={isMuted ? 'إلغاء كتم الصوت' : 'كتم الصوت'}
+                aria-label={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
+                title={isMuted ? 'تشغيل الصوت' : 'كتم الصوت'}
             >
-                {isMuted ? <MdVolumeOff size={20} /> : <MdVolumeUp size={20} />}
+                {isMuted ? (
+                    <>
+                        <MdVolumeOff size={20} />
+                        <span>شغّل الصوت</span>
+                    </>
+                ) : (
+                    <MdVolumeUp size={20} />
+                )}
             </button>
 
             {/* Quick action controls for horizontal videos */}

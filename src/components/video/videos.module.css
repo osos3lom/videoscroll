@@ -47,7 +47,8 @@
     z-index: 0;
 }
 
-/* Full-bleed tap target for play/pause. */
+/* Full-bleed tap target for play/pause. Above the video, or the paused
+   play icon it holds would be painted behind it. */
 .video__press {
     position: absolute;
     top: 0;
@@ -59,29 +60,51 @@
     background: transparent;
     cursor: pointer;
     touch-action: pan-y;
+    z-index: 2;
 }
 
+/* Sits in the same layer as the other on-video controls: the video element
+   itself is z-index 1 and would otherwise paint over the button. */
 .video__mute {
     position: absolute;
     /* Push below the notch / Dynamic Island on iPhones */
     top: calc(16px + env(safe-area-inset-top, 0px));
     right: calc(16px + env(safe-area-inset-right, 0px));
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 0;
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.45);
+    gap: 6px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 20px;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
     color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 150ms ease, transform 150ms ease;
 }
 
+/* Muted is the state worth shouting about: it is the one people want to leave. */
+.video__mute_muted {
+    padding: 0 14px 0 12px;
+    border-color: rgba(255, 255, 255, 0.6);
+    background-color: rgba(0, 0, 0, 0.78);
+}
+
 .video__mute:hover {
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.85);
     transform: scale(1.06);
+}
+
+.video__mute:active {
+    transform: scale(0.96);
 }
 
 .video__mute:focus-visible {
