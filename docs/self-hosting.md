@@ -29,7 +29,7 @@ videos and the API run on an old Linux PC at home.
 │  • prefetcher → IndexedDB chunks     │              │        chunked uploads → job queue       │
 │  • sw.js serves cached video bytes   │              │        ffprobe / ffmpeg (nice, 1 job)    │
 └──────────────────────────────────────┘              │ /srv/videoscroll                         │
-                                                      │   videos/ posters/ meta/ data/           │
+                                                      │   videos/ images/ posters/ meta/ data/   │
                                                       │   incoming/ inbox/ failed/               │
                                                       └──────────────────────────────────────────┘
 ```
@@ -422,10 +422,12 @@ re-run the Pages workflow to fall back to the demo.
 03:30, at idle CPU and IO priority. Settings live in
 `/etc/videoscroll-backup.env`. Each run:
 
-- **mirrors** `videos/`, `posters/` and `meta/` to
+- **mirrors** `videos/`, `images/`, `posters/` and `meta/` to
   `/mnt/videoscroll-backup/videoscroll/`. Deletions reach the backup only on
   Sundays, so a video deleted by mistake stays recoverable for up to a week.
-- **snapshots** `data/` (accounts, invites, session secret) as dated tarballs,
+- **snapshots** `data/` (accounts, invites, session secret, share links,
+  everyone's likes and saves in `reactions/`, collections in
+  `collections/`) as dated tarballs,
   keeping 30. They are mode 600 because they contain password hashes and the
   signing key.
 - **records** `last-success`. `doctor` warns when it is older than 48 hours.
@@ -444,7 +446,7 @@ touches nothing live:
 ```bash
 B=/mnt/videoscroll-backup/videoscroll
 T=$(mktemp -d)
-sudo cp -r "$B"/videos "$B"/posters "$B"/meta "$T"/
+sudo cp -r "$B"/videos "$B"/images "$B"/posters "$B"/meta "$T"/
 sudo tar -xzf "$(ls -1t "$B"/data-snapshots/*.tar.gz | head -1)" -C "$T"
 sudo chown -R videoscroll: "$T"
 sudo -u videoscroll env MEDIA_DIR="$T" PORT=3999 ALLOWED_ORIGINS=http://localhost \

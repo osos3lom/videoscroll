@@ -8,16 +8,18 @@ import Sheet from '../sheet'
 import styles from './addToCollection.module.css'
 
 interface Props {
-    mediaId: string
+    /** One item, or several of the same kind (e.g. a batch of new photos). */
+    mediaIds: string[]
     kind: MediaKind
     onClose: () => void
 }
 
 /**
- * Putting one video or image into collections, or taking it out. A video
- * goes into collections; an image into collections or image categories.
+ * Putting videos or images into collections, or taking them out. Videos go
+ * into collections; images into collections or image categories. A
+ * collection counts as ticked when it holds all of them.
  */
-export default function AddToCollection({ mediaId, kind, onClose }: Props) {
+export default function AddToCollection({ mediaIds, kind, onClose }: Props) {
     const collections = useCollections('collections')
     const categories = useCollections('images')
     const [creating, setCreating] = useState<CollectionSection | null>(null)
@@ -28,7 +30,7 @@ export default function AddToCollection({ mediaId, kind, onClose }: Props) {
         return (
             <CollectionEditor
                 section={creating}
-                initialMediaIds={[mediaId]}
+                initialMediaIds={mediaIds}
                 onClose={() => setCreating(null)}
             />
         )
@@ -39,9 +41,12 @@ export default function AddToCollection({ mediaId, kind, onClose }: Props) {
         setBusy(c.id)
         setError(null)
         try {
-            const item = c.items?.find((it) => it.mediaId === mediaId)
-            if (item) await collectionApi.removeItem(c.id, item.id)
-            else await collectionApi.addItems(c.id, [mediaId])
+            const items = (c.items ?? []).filter((it) => mediaIds.includes(it.mediaId))
+            if (items.length === mediaIds.length) {
+                for (const item of items) await collectionApi.removeItem(c.id, item.id)
+            } else {
+                await collectionApi.addItems(c.id, mediaIds)
+            }
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : 'تعذر الحفظ')
         } finally {
@@ -55,13 +60,13 @@ export default function AddToCollection({ mediaId, kind, onClose }: Props) {
     if (kind === 'image') groups.push({ section: 'images', title: 'تصنيفات الصور', data: categories })
 
     return (
-        <Sheet title="أضف إلى مجموعة" onClose={onClose}>
+        <Sheet title={mediaIds.length > 1 ? `أضف ${mediaIds.length} عناصر إلى مجموعة` : 'أضف إلى مجموعة'} onClose={onClose}>
             {groups.map(({ section, title, data }) => (
                 <section key={section} className={styles.group}>
                     {groups.length > 1 && <h3 className={styles.groupTitle}>{title}</h3>}
                     <ul className={styles.list}>
                         {data.collections.map((c) => {
-                            const inside = Boolean(c.items?.some((it) => it.mediaId === mediaId))
+                            const inside = mediaIds.every((id) => c.items?.some((it) => it.mediaId === id))
                             const cover =
                                 c.cover && data.mediaToken
                                     ? c.cover.kind === 'video'

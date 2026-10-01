@@ -293,7 +293,7 @@ const FeedPage = () => {
                     )}
                 </div>
             </main>
-            {addingTo && <AddToCollection mediaId={addingTo} kind="video" onClose={() => setAddingTo(null)} />}
+            {addingTo && <AddToCollection mediaIds={[addingTo]} kind="video" onClose={() => setAddingTo(null)} />}
         </div>
     )
 }

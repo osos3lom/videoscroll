@@ -38,7 +38,7 @@ test('an interrupted upload resumes after the tab is closed, then publishes', as
 
     const created = first.waitForResponse((r) => r.url().endsWith('/api/uploads') && r.request().method() === 'POST')
     await first.goto('')
-    await first.locator('input[type=file]').setInputFiles(file)
+    await first.getByLabel('اختيار فيديوهات').setInputFiles(file)
     const { uploadId } = (await (await created).json()) as UploadStatus
     await interruptedSignal
     await first.close()
@@ -51,7 +51,7 @@ test('an interrupted upload resumes after the tab is closed, then publishes', as
     const second = await context.newPage()
     const resumed = second.waitForResponse((r) => r.url().endsWith('/api/uploads') && r.request().method() === 'POST')
     await second.goto('')
-    await second.locator('input[type=file]').setInputFiles(file)
+    await second.getByLabel('اختيار فيديوهات').setInputFiles(file)
     const resumedStatus = (await (await resumed).json()) as UploadStatus
     expect(resumedStatus.uploadId).toBe(uploadId)
     expect(resumedStatus.received).toBe(CHUNK)

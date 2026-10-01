@@ -178,7 +178,7 @@ export default function CollectionViewPage({ section }: { section: CollectionSec
             )}
             {editing && <CollectionEditor section={section} collection={editing} onClose={() => setEditing(null)} />}
             {sharing && <CollectionShare collection={sharing} onClose={() => setSharing(null)} />}
-            {adding && <AddToCollection mediaId={adding.id} kind={adding.kind} onClose={() => setAdding(null)} />}
+            {adding && <AddToCollection mediaIds={[adding.id]} kind={adding.kind} onClose={() => setAdding(null)} />}
         </>
     )
 }

@@ -39,17 +39,23 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
     })
 }
 
-/** Sends `file` and resolves once every byte is on the server. */
+/**
+ * Sends `file` and resolves once every byte is on the server. `onCreated`
+ * hears the upload id as soon as the server has one, so a cancel can reach
+ * the server while bytes are still moving.
+ */
 export async function uploadFile(
     file: File,
     onProgress: (progress: UploadProgress) => void,
-    signal: AbortSignal
+    signal: AbortSignal,
+    onCreated?: (status: UploadStatus) => void
 ): Promise<UploadStatus> {
     let status = await apiFetch<UploadStatus>('/api/uploads', {
         method: 'POST',
         json: { fileName: file.name, size: file.size, lastModified: file.lastModified },
         signal,
     })
+    onCreated?.(status)
 
     const resumedFrom = status.received
     let offset = status.received

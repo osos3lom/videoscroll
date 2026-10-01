@@ -3,6 +3,7 @@ import {
     MdAdd,
     MdDeleteOutline,
     MdEdit,
+    MdFileUpload,
     MdLock,
     MdMoreVert,
     MdOpenInFull,
@@ -11,10 +12,12 @@ import {
     MdShare,
 } from 'react-icons/md'
 import { Link, useNavigate } from 'react-router'
-import { collectionApi, useCollections } from '../../hooks/useCollections'
+import { collectionApi, refreshCollections, useCollections } from '../../hooks/useCollections'
 import { useDialog } from '../../hooks/useDialog'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
-import { useImages } from '../../hooks/useImages'
+import { IMAGES_CHANGED_EVENT, useImages } from '../../hooks/useImages'
+import { apiFetch } from '../../lib/session'
+import { PICK_UPLOAD_EVENT } from '../../lib/uploadQueue'
 import { imageEntry } from '../../hooks/useMedia'
 import { useSession } from '../../hooks/useSession'
 import { imageThumbUrl, posterUrl } from '../../lib/apiUrl'
@@ -59,6 +62,7 @@ export default function CollectionsIndex({ section }: { section: CollectionSecti
     const { collections, mediaToken, isLoading, unsupported, error } = useCollections(section)
     const images = useImages()
     const myImages = images.images.filter((image) => image.uploaderId === session?.user.id)
+    const canUpload = session?.user.role === 'owner' || session?.user.role === 'uploader'
 
     const [editing, setEditing] = useState<Collection | 'new' | null>(null)
     const [sharing, setSharing] = useState<Collection | null>(null)
@@ -87,6 +91,23 @@ export default function CollectionsIndex({ section }: { section: CollectionSecti
         }
     }
 
+    const deleteImage = async (imageId: string, title: string) => {
+        const confirmed = await dialog.confirm({
+            title: 'حذف الصورة؟',
+            message: `ستُحذف «${title}» نهائياً، وتُزال من كل تصنيفاتك ومجموعاتك.`,
+            confirmLabel: 'حذف',
+            danger: true,
+        })
+        if (!confirmed) return
+        try {
+            await apiFetch(`/api/images/${encodeURIComponent(imageId)}`, { method: 'DELETE' })
+            window.dispatchEvent(new Event(IMAGES_CHANGED_EVENT))
+            void refreshCollections()
+        } catch (caught) {
+            setMessage(caught instanceof Error ? caught.message : 'تعذر الحذف')
+        }
+    }
+
     if (unsupported) {
         return (
             <div className={styles.page}>
@@ -108,10 +129,22 @@ export default function CollectionsIndex({ section }: { section: CollectionSecti
                     <h1 className={styles.title}>{text.title}</h1>
                     <p className={styles.subtitle}>{text.subtitle}</p>
                 </div>
-                <button type="button" className={styles.create} onClick={() => setEditing('new')}>
-                    <MdAdd size={20} />
-                    {text.create}
-                </button>
+                <div className={styles.headerActions}>
+                    {section === 'images' && canUpload && (
+                        <button
+                            type="button"
+                            className={`${styles.create} ${styles.secondary}`}
+                            onClick={() => window.dispatchEvent(new CustomEvent(PICK_UPLOAD_EVENT, { detail: 'image' }))}
+                        >
+                            <MdFileUpload size={20} />
+                            رفع صور
+                        </button>
+                    )}
+                    <button type="button" className={styles.create} onClick={() => setEditing('new')}>
+                        <MdAdd size={20} />
+                        {text.create}
+                    </button>
+                </div>
             </header>
 
             {message && (
@@ -185,6 +218,16 @@ export default function CollectionsIndex({ section }: { section: CollectionSecti
                                 key={image.imageId}
                                 media={imageEntry(image)}
                                 to={`/images/all?item=${encodeURIComponent(image.imageId)}`}
+                                actions={
+                                    <button
+                                        type="button"
+                                        className={styles.tileAction}
+                                        aria-label={`حذف ${image.title}`}
+                                        onClick={() => void deleteImage(image.imageId, image.title)}
+                                    >
+                                        <MdDeleteOutline size={18} />
+                                    </button>
+                                }
                             />
                         ))}
                     </div>

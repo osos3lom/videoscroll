@@ -32,7 +32,8 @@ src/                    browser only
   types/api.ts          hand-mirrored Go wire types
   lib/apiUrl.ts         the single source of URL composition
   lib/session.ts        bearer token + apiFetch (401 → sign out + wipe cache)
-  lib/uploader.ts       resumable chunked upload
+  lib/uploader.ts       resumable chunked upload (one file)
+  lib/uploadQueue.ts    batches of ≤5 videos / ≤20 images over uploader.ts: progress, retry, cancel
   lib/mediaCache/       chunkStore (IndexedDB, DOM-free), prefetcher, network hints
   sw/sw.ts              service worker: serves cached video ranges
   hooks/useVideos.ts    the single source of video data
@@ -140,6 +141,11 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
   disk`; that one rule makes retries idempotent. The offset travels in the
   `Upload-Offset` header, not the query string, because browsers cache CORS
   preflights per URL.
+- **There is one upload path.** `lib/uploadQueue.ts` only schedules files
+  (2 videos / 3 images at a time) through `uploadFile`; the server infers
+  video or image from the name and caps each member at 40 unfinished
+  uploads. Batch limits (5 / 20) are a client rule for a sane queue, not a
+  security boundary.
 - **No global `WriteTimeout`/`ReadTimeout` on the HTTP server.** They would cut
   off long streams. Per-request deadlines go through `http.ResponseController`.
 - **Media is opened through `os.Root`** (`videosRoot`, `imagesRoot`, `postersRoot`), never

@@ -47,16 +47,29 @@ export async function createInvite(token: string, role: 'viewer' | 'uploader' | 
     return body.code
 }
 
-/** Creates a member through an invite, entirely over the API. */
+/**
+ * Creates a member entirely over the API, the way the owner adds people: a
+ * temporary password, then the member's own. (Invites go through the join
+ * route, whose per-address limit a long suite would exhaust; members.spec
+ * covers that path.)
+ */
 export async function createMember(role: 'viewer' | 'uploader') {
-    const code = await createInvite(ownerToken(), role)
     const username = `${role}-${crypto.randomBytes(3).toString('hex')}`
+    const temporary = crypto.randomBytes(12).toString('base64url')
     const password = crypto.randomBytes(12).toString('base64url')
-    const { status, body } = await apiFetch<SessionResponse>('/api/auth/join', {
+    const created = await apiFetch('/api/admin/users', {
         method: 'POST',
-        json: { code, username, password },
+        token: ownerToken(),
+        json: { username, displayName: username, password: temporary, role },
     })
-    if (status !== 201) throw new Error(`join failed with ${status}`)
+    if (created.status !== 201) throw new Error(`create member failed with ${created.status}`)
+    const first = await apiLogin(username, temporary)
+    const { status, body } = await apiFetch<SessionResponse>('/api/auth/password', {
+        method: 'POST',
+        token: first.token,
+        json: { currentPassword: temporary, newPassword: password },
+    })
+    if (status !== 200) throw new Error(`password change failed with ${status}`)
     return { username, password, session: body }
 }
 

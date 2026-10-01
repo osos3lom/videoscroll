@@ -42,6 +42,23 @@ Use `✅` / `❌` and a note per device.
 | S4 | The member stops the link from Profile; the other phone's reload says the link no longer works | |
 | S5 | The owner sees every member's links on Manage community and can stop them | |
 
+## Profile, collections and images (on each phone)
+
+| # | Check | iPhone Safari | iPhone app | Android |
+| --- | --- | --- | --- | --- |
+| C1 | The bottom bar is Home · Collections · + · Images · Profile; Profile has Videos / Saved / Liked tabs | | | |
+| C2 | A like or save made on one phone shows in Profile → Liked / Saved on another phone of the same account | | | |
+| C3 | Create a collection with videos and photos, reorder it, set a cover, make it public | | | |
+| C4 | In the collection, swipe left/right: the next/previous item; swipe up/down: the other collections. A diagonal swipe never does both | | | |
+| C5 | A video in a collection: tap pauses, double tap skips, a sideways swipe goes to the next item (never scrubs); the seek bar scrubs | | | |
+| C6 | The back button and the phone's back gesture both return to the list in one step | | | |
+| C7 | The public link opens on a phone with no account as a vertical feed, in order; after **Stop sharing** it no longer works | | | |
+| C8 | Delete a collection: its videos and photos are all still in the feed / Images | | | |
+| C9 | Pick 6 videos: 5 are queued with a message about the limit. Pick 21 photos: 20 are queued | | | |
+| C10 | iPhone: pick photos from the library (HEIC on the phone): they arrive as JPEG and show upright | | | |
+| C11 | Turn airplane mode on mid-batch: failed items say so; **Retry** finishes them | | | |
+| C12 | Another member cannot see your photos anywhere | | | |
+
 ## Accounts (owner on one device, member on another)
 
 | # | Check | Result |

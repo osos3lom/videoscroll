@@ -1,187 +1,85 @@
-import { type FC, type JSX, useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { MdAdd, MdClose } from 'react-icons/md'
-import { IMAGES_CHANGED_EVENT } from '../../hooks/useImages'
-import { VIDEOS_CHANGED_EVENT } from '../../hooks/useVideos'
-import { ApiError } from '../../lib/session'
-import { cancelUpload, getUploadStatus, uploadFile } from '../../lib/uploader'
+import { type ChangeEvent, type FC, type JSX, useEffect, useRef, useState } from 'react'
+import { MdAdd, MdPhotoLibrary, MdVideoLibrary } from 'react-icons/md'
+import { ACCEPT, BATCH_LIMIT, PICK_UPLOAD_EVENT, addFiles, resetQueue } from '../../lib/uploadQueue'
+import type { MediaKind } from '../../types/api'
+import { ActionSheet } from '../sheet'
+import UploadQueue from '../uploadQueue'
 import styles from './upload.module.css'
 
-type Phase =
-    | { kind: 'idle' }
-    | { kind: 'uploading'; percent: number; resumed: boolean }
-    | { kind: 'processing'; fileName: string }
-    | { kind: 'done'; message: string }
-    | { kind: 'error'; message: string }
-
-const POLL_MS = 4000
-
 /**
- * The navbar's "+" button and everything behind it. Rendered only for
- * accounts that can upload; the server enforces the same rule regardless.
+ * The navbar's "+" button and everything behind it: a choice of videos or
+ * images, the file pickers, and the queue. Rendered only for accounts that
+ * can upload; the server enforces the same rule regardless.
  */
 const Upload: FC = (): JSX.Element => {
-    const inputRef = useRef<HTMLInputElement | null>(null)
-    const controllerRef = useRef<AbortController | null>(null)
-    const uploadIdRef = useRef<string | null>(null)
-    const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
+    const inputs = useRef<Record<MediaKind, HTMLInputElement | null>>({ video: null, image: null })
+    const [choosing, setChoosing] = useState(false)
+    const [notice, setNotice] = useState<string | null>(null)
 
-    const busy = phase.kind === 'uploading'
+    // Signing out unmounts the layout: nothing keeps uploading for nobody.
+    useEffect(() => () => resetQueue(), [])
 
-    useEffect(() => () => controllerRef.current?.abort(), [])
-
-    // Auto-dismiss finished and failed toasts.
+    // Other pages (e.g. /images) open a picker through an event, so there is
+    // still only one set of inputs and one queue.
     useEffect(() => {
-        if (phase.kind !== 'done' && phase.kind !== 'error') return
-        const timer = setTimeout(() => setPhase({ kind: 'idle' }), 6000)
-        return () => clearTimeout(timer)
-    }, [phase])
-
-    const waitForProcessing = useCallback(async (uploadId: string, fileName: string, signal: AbortSignal) => {
-        setPhase({ kind: 'processing', fileName })
-        for (;;) {
-            await new Promise((resolve) => setTimeout(resolve, POLL_MS))
-            if (signal.aborted) return
-            try {
-                const status = await getUploadStatus(uploadId, signal)
-                if (status.state === 'ready') {
-                    window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
-                    window.dispatchEvent(new Event(IMAGES_CHANGED_EVENT))
-                    setPhase({ kind: 'done', message: `“${fileName}” تم النشر بنجاح` })
-                    return
-                }
-                if (status.state === 'failed') {
-                    setPhase({ kind: 'error', message: status.error ?? 'فشلت معالجة الفيديو' })
-                    return
-                }
-            } catch (error) {
-                if (signal.aborted) return
-                if (error instanceof ApiError && error.status === 404) {
-                    // The record was swept after completion.
-                    window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
-                    setPhase({ kind: 'idle' })
-                    return
-                }
-                // Transient: keep polling.
-            }
+        const onPick = (event: Event) => {
+            const kind = (event as CustomEvent<MediaKind>).detail
+            if (kind === 'video' || kind === 'image') inputs.current[kind]?.click()
         }
+        window.addEventListener(PICK_UPLOAD_EVENT, onPick)
+        return () => window.removeEventListener(PICK_UPLOAD_EVENT, onPick)
     }, [])
 
-    const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0]
+    const onFiles = (kind: MediaKind) => (event: ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(event.target.files ?? [])
         event.target.value = ''
-        if (!file) return
-
-        const controller = new AbortController()
-        controllerRef.current = controller
-        setPhase({ kind: 'uploading', percent: 0, resumed: false })
-
-        try {
-            const status = await uploadFile(
-                file,
-                ({ sent, total, resumedFrom }) => {
-                    setPhase({
-                        kind: 'uploading',
-                        percent: Math.floor((sent / total) * 100),
-                        resumed: resumedFrom > 0,
-                    })
-                },
-                controller.signal
-            )
-            uploadIdRef.current = status.uploadId
-
-            if (status.state === 'ready') {
-                window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
-                setPhase({ kind: 'done', message: 'تم رفع هذا الفيديو مسبقاً' })
-                return
-            }
-            if (status.state === 'failed') {
-                setPhase({ kind: 'error', message: status.error ?? 'فشلت معالجة الفيديو' })
-                return
-            }
-            await waitForProcessing(status.uploadId, file.name, controller.signal)
-        } catch (error) {
-            if (controller.signal.aborted) return
-            const message =
-                error instanceof ApiError || error instanceof Error ? error.message : 'فشل الرفع'
-            setPhase({
-                kind: 'error',
-                message: `${message}. اختر نفس الملف مجدداً لاستئناف الرفع.`,
-            })
-        }
-    }
-
-    const cancel = () => {
-        controllerRef.current?.abort()
-        if (uploadIdRef.current && phase.kind === 'uploading') {
-            void cancelUpload(uploadIdRef.current)
-        }
-        uploadIdRef.current = null
-        setPhase({ kind: 'idle' })
+        if (files.length === 0) return
+        setNotice(addFiles(kind, files).notice ?? null)
     }
 
     return (
         <>
-            <button
-                type="button"
-                className={styles.addButton}
-                onClick={() => !busy && inputRef.current?.click()}
-                aria-label="رفع فيديو"
-                disabled={busy}
-            >
+            <button type="button" className={styles.addButton} onClick={() => setChoosing(true)} aria-label="رفع فيديوهات أو صور">
                 <div className={styles.addIconWrapper}>
                     <MdAdd size={28} color="#000" />
                 </div>
             </button>
 
-            <input
-                type="file"
-                ref={inputRef}
-                accept="video/*,image/jpeg,image/png,image/webp,image/gif"
-                onChange={handleFile}
-                style={{ display: 'none' }}
-            />
+            {(['video', 'image'] as MediaKind[]).map((kind) => (
+                <input
+                    key={kind}
+                    type="file"
+                    multiple
+                    ref={(el) => {
+                        inputs.current[kind] = el
+                    }}
+                    accept={ACCEPT[kind]}
+                    aria-label={kind === 'video' ? 'اختيار فيديوهات' : 'اختيار صور'}
+                    onChange={onFiles(kind)}
+                    style={{ display: 'none' }}
+                />
+            ))}
 
-            {/*
-             * Portaled to <body>: the navbar has a transform and a
-             * backdrop-filter, either of which traps position: fixed children.
-             */}
-            {phase.kind !== 'idle' &&
-                createPortal(
-                    <div
-                        className={`${styles.toast} ${phase.kind === 'error' ? styles.toast_error : ''}`}
-                        role="status"
-                    >
-                        {(phase.kind === 'uploading' || phase.kind === 'processing') && (
-                            <div className={styles.toast__spinner} />
-                        )}
-                        <span>
-                            {phase.kind === 'uploading' &&
-                                `${phase.resumed ? 'استئناف الرفع' : 'جارٍ الرفع'}… ${phase.percent}%`}
-                            {phase.kind === 'processing' && 'جارٍ المعالجة على الخادم…'}
-                            {(phase.kind === 'done' || phase.kind === 'error') && phase.message}
-                        </span>
-                        {phase.kind === 'uploading' && (
-                            <>
-                                <button
-                                    type="button"
-                                    className={styles.toast__cancel}
-                                    onClick={cancel}
-                                    aria-label="إلغاء الرفع"
-                                >
-                                    <MdClose size={16} />
-                                </button>
-                                <div className={styles.toast__progressbar}>
-                                    <div
-                                        className={styles.toast__progressbarFill}
-                                        style={{ width: `${phase.percent}%` }}
-                                    />
-                                </div>
-                            </>
-                        )}
-                    </div>,
-                    document.body
-                )}
+            {choosing && (
+                <ActionSheet
+                    title="ماذا تريد أن ترفع؟"
+                    onClose={() => setChoosing(false)}
+                    actions={[
+                        {
+                            label: `فيديوهات (حتى ${BATCH_LIMIT.video} في المرة)`,
+                            icon: <MdVideoLibrary size={22} />,
+                            onSelect: () => inputs.current.video?.click(),
+                        },
+                        {
+                            label: `صور (حتى ${BATCH_LIMIT.image} في المرة)`,
+                            icon: <MdPhotoLibrary size={22} />,
+                            onSelect: () => inputs.current.image?.click(),
+                        },
+                    ]}
+                />
+            )}
+
+            <UploadQueue notice={notice} onDismissNotice={() => setNotice(null)} />
         </>
     )
 }

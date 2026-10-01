@@ -49,6 +49,32 @@
     cursor: pointer;
 }
 
+.headerActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tileAction {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.65);
+    color: #ff8fab;
+    cursor: pointer;
+}
+
+.tileAction:focus-visible,
 .create:focus-visible,
 .more:focus-visible,
 .cardLink:focus-visible,
