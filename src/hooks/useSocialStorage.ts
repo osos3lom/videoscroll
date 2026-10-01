@@ -1,7 +1,11 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import type { VideoSocial } from '../types/api'
 
-const LOCAL_STORAGE_SOCIAL_KEY = 'videoscroll_social'
+/**
+ * Likes and saves as this device kept them before they moved to the server.
+ * Still the store in the demo and against an older server; see useReactions.
+ */
+export const LOCAL_STORAGE_SOCIAL_KEY = 'videoscroll_social'
 
 function getSocialSnapshot(): string {
     if (typeof window === 'undefined') return '{}'

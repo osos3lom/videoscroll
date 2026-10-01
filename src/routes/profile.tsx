@@ -1,31 +1,53 @@
-import { type FormEvent, useState } from 'react'
-import { Link } from 'react-router'
+import { type FormEvent, type KeyboardEvent, useRef, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams } from 'react-router'
+import { MdBookmarkBorder, MdFavoriteBorder, MdOutlineVideoLibrary } from 'react-icons/md'
 import useSWR from 'swr'
 import { useDialog } from '../hooks/useDialog'
 import ShareList from '../components/shareList'
 import VideoCard from '../components/videoCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useReactions } from '../hooks/useReactions'
 import { useSession, useSessionActions } from '../hooks/useSession'
-import { useSocialStorage } from '../hooks/useSocialStorage'
 import { VIDEOS_CHANGED_EVENT, useVideos } from '../hooks/useVideos'
 import { loginHint } from '../lib/accounts'
 import { downloadVideo } from '../lib/download'
 import { apiFetch } from '../lib/session'
-import type { PublicUser } from '../types/api'
+import type { LocalVideo, PublicUser } from '../types/api'
 import authStyles from './auth.module.css'
+import profileStyles from './profile.module.css'
 import styles from './sharedGrid.module.css'
 
 const ROLE_LABEL = { owner: 'المالك', uploader: 'ناشر', viewer: 'عضو' } as const
 
+const PROFILE_TABS = ['videos', 'saved', 'liked'] as const
+type ProfileTab = (typeof PROFILE_TABS)[number]
+
+const TAB_LABEL: Record<ProfileTab, string> = { videos: 'الفيديوهات', saved: 'المحفوظات', liked: 'الإعجابات' }
+const TAB_ICON = { videos: MdOutlineVideoLibrary, saved: MdBookmarkBorder, liked: MdFavoriteBorder }
+
+/** Videos in the order of `ids`, skipping any no longer in the list. */
+function pick(videos: LocalVideo[], ids: string[]): LocalVideo[] {
+    const byId = new Map(videos.map((v) => [v.videoId, v]))
+    return ids.flatMap((id) => byId.get(id) ?? [])
+}
+
 const ProfilePage = () => {
     useDocumentTitle('الملف الشخصي - VideoScroll')
 
+    const params = useParams()
+    const navigate = useNavigate()
+    const tab = (params.tab ?? 'videos') as ProfileTab
+    const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+
     const session = useSession()
     const { logout, logoutEverywhere, changePassword } = useSessionActions()
-    const { videos, social: serverSocial, isDemo } = useVideos()
-    const [social] = useSocialStorage(serverSocial)
+    const { videos, social: serverSocial, isDemo, isLoading } = useVideos()
+    const reactions = useReactions(serverSocial)
     const dialog = useDialog()
 
+    // The owner starts on every video, as before tabs: imported videos have
+    // no uploader, and this is where the owner manages them.
+    const [showAllChoice, setShowAll] = useState<boolean | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [currentPassword, setCurrentPassword] = useState('')
     const [newPassword, setNewPassword] = useState('')
@@ -33,10 +55,13 @@ const ProfilePage = () => {
 
     const user = session?.user
     const isOwner = !isDemo && user?.role === 'owner'
+    const showAll = isOwner && (showAllChoice ?? true)
     const canUpload = user?.role === 'owner' || user?.role === 'uploader'
     const myVideos = isDemo ? videos : videos.filter((v) => v.uploaderId && v.uploaderId === user?.id)
-    // The owner manages every video from here; everyone else, their own.
-    const managedVideos = isOwner ? videos : myVideos
+    // The owner can switch to every video, to manage them from here.
+    const listedVideos = isOwner && showAll ? videos : myVideos
+    const savedVideos = pick(videos, reactions.savedIds)
+    const likedVideos = pick(videos, reactions.likedIds)
 
     // Uploader names for the owner's list.
     const members = useSWR<{ users: PublicUser[] }>(isOwner ? '/api/admin/users' : null, (path: string) =>
@@ -49,8 +74,26 @@ const ProfilePage = () => {
         return member ? member.displayName || loginHint(member.username) : 'عضو محذوف'
     }
 
-    const totalLikes = videos.reduce((acc, v) => acc + (social[v.videoId]?.likes ?? 0), 0)
-    const totalSaved = videos.reduce((acc, v) => acc + (social[v.videoId]?.bookmarks ?? 0), 0)
+    if (!PROFILE_TABS.includes(tab)) return <Navigate to="/profile" replace />
+
+    const selectTab = (next: ProfileTab) => {
+        navigate(next === 'videos' ? '/profile' : `/profile/${next}`, { replace: true })
+    }
+
+    // Arrow keys move between tabs. The page is right-to-left, so the next
+    // tab is to the left.
+    const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+        const index = PROFILE_TABS.indexOf(tab)
+        let next = -1
+        if (event.key === 'ArrowLeft') next = (index + 1) % PROFILE_TABS.length
+        if (event.key === 'ArrowRight') next = (index - 1 + PROFILE_TABS.length) % PROFILE_TABS.length
+        if (event.key === 'Home') next = 0
+        if (event.key === 'End') next = PROFILE_TABS.length - 1
+        if (next < 0) return
+        event.preventDefault()
+        selectTab(PROFILE_TABS[next])
+        tabRefs.current[PROFILE_TABS[next]]?.focus()
+    }
 
     const submitPassword = async (event: FormEvent) => {
         event.preventDefault()
@@ -108,6 +151,30 @@ const ProfilePage = () => {
     }
 
     const name = user?.displayName ?? 'زائر تجريبي'
+    const counts: Record<ProfileTab, number> = {
+        videos: myVideos.length,
+        saved: savedVideos.length,
+        liked: likedVideos.length,
+    }
+
+    const emptyText: Record<ProfileTab, { title: string; text: string }> = {
+        videos: {
+            title: isOwner && showAll ? 'لا توجد فيديوهات بعد' : 'لا توجد مرفوعات بعد',
+            text: canUpload
+                ? 'اضغط على زر "+" في شريط التنقل لرفع أول فيديو لك.'
+                : 'حسابك يتيح المشاهدة فقط دون الرفع. تواصل مع المالك إذا كنت ترغب في نشر فيديوهات.',
+        },
+        saved: {
+            title: 'لا توجد عناصر محفوظة بعد',
+            text: 'اضغط على رمز الحفظ في أي فيديو ليظهر هنا.',
+        },
+        liked: {
+            title: 'لا توجد إعجابات بعد',
+            text: 'اضغط على رمز القلب في أي فيديو ليظهر هنا.',
+        },
+    }
+
+    const shown = tab === 'videos' ? listedVideos : tab === 'saved' ? savedVideos : likedVideos
 
     return (
         <div className={styles.container}>
@@ -131,115 +198,166 @@ const ProfilePage = () => {
                 </div>
 
                 <div className={styles.profileStats}>
-                    <div className={styles.profileStat}>
-                        <span className={styles.profileStat__value}>{myVideos.length}</span>
-                        <span className={styles.profileStat__label}>المرفوعات</span>
-                    </div>
-                    <div className={styles.profileStat}>
-                        <span className={styles.profileStat__value}>{totalLikes}</span>
-                        <span className={styles.profileStat__label}>الإعجابات</span>
-                    </div>
-                    <div className={styles.profileStat}>
-                        <span className={styles.profileStat__value}>{totalSaved}</span>
-                        <span className={styles.profileStat__label}>المحفوظات</span>
-                    </div>
+                    {PROFILE_TABS.map((key) => (
+                        <div key={key} className={styles.profileStat}>
+                            <span className={styles.profileStat__value}>{counts[key]}</span>
+                            <span className={styles.profileStat__label}>{TAB_LABEL[key]}</span>
+                        </div>
+                    ))}
                 </div>
-
-                {user && (
-                    <div className={styles.profileActions}>
-                        {user.role === 'owner' && (
-                            <Link to="/admin" className={styles.profileAction}>
-                                إدارة المجتمع
-                            </Link>
-                        )}
-                        <button type="button" className={styles.profileAction} onClick={() => setShowPassword((v) => !v)}>
-                            تغيير كلمة المرور
-                        </button>
-                        <button type="button" className={styles.profileAction} onClick={logout}>
-                            تسجيل الخروج
-                        </button>
-                        <button type="button" className={styles.profileAction} onClick={signOutEverywhere}>
-                            تسجيل الخروج من كل الأجهزة
-                        </button>
-                    </div>
-                )}
-
-                {showPassword && (
-                    <form className={styles.profileForm} onSubmit={submitPassword}>
-                        <input
-                            className={authStyles.input}
-                            type="password"
-                            placeholder="كلمة المرور الحالية"
-                            autoComplete="current-password"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            required
-                        />
-                        <input
-                            className={authStyles.input}
-                            type="password"
-                            placeholder="كلمة المرور الجديدة (10 أحرف أو أكثر)"
-                            autoComplete="new-password"
-                            minLength={10}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            required
-                        />
-                        <button type="submit" className={`${authStyles.button} ${authStyles.button_primary}`}>
-                            حفظ
-                        </button>
-                    </form>
-                )}
-
-                {message && <p className={message.ok ? authStyles.success : authStyles.error}>{message.text}</p>}
             </header>
 
-            <main>
-                <h2 className={styles.profileSectionTitle}>
-                    {isOwner ? `جميع الفيديوهات (${managedVideos.length})` : 'مرفوعاتي'}
-                </h2>
-                {isOwner && managedVideos.length > 0 && (
-                    <p className={styles.profileSectionHint}>
-                        بصفتك المالك يمكنك تعديل اسم أو حذف أي فيديو.
-                    </p>
+            <div className={profileStyles.tabs} role="tablist" aria-label="محتوى الملف الشخصي">
+                {PROFILE_TABS.map((key) => {
+                    const Icon = TAB_ICON[key]
+                    const selected = key === tab
+                    return (
+                        <button
+                            key={key}
+                            ref={(el) => {
+                                tabRefs.current[key] = el
+                            }}
+                            type="button"
+                            role="tab"
+                            id={`profile-tab-${key}`}
+                            aria-selected={selected}
+                            aria-controls="profile-panel"
+                            tabIndex={selected ? 0 : -1}
+                            className={`${profileStyles.tab} ${selected ? profileStyles.tab_selected : ''}`}
+                            onClick={() => selectTab(key)}
+                            onKeyDown={onTabKeyDown}
+                        >
+                            <Icon size={20} aria-hidden="true" />
+                            <span>{TAB_LABEL[key]}</span>
+                        </button>
+                    )
+                })}
+            </div>
+
+            <main id="profile-panel" role="tabpanel" aria-labelledby={`profile-tab-${tab}`}>
+                {tab === 'videos' && isOwner && (
+                    <div className={profileStyles.chips}>
+                        <button
+                            type="button"
+                            className={`${profileStyles.chip} ${!showAll ? profileStyles.chip_selected : ''}`}
+                            aria-pressed={!showAll}
+                            onClick={() => setShowAll(false)}
+                        >
+                            مرفوعاتي
+                        </button>
+                        <button
+                            type="button"
+                            className={`${profileStyles.chip} ${showAll ? profileStyles.chip_selected : ''}`}
+                            aria-pressed={showAll}
+                            onClick={() => setShowAll(true)}
+                        >
+                            كل الفيديوهات ({videos.length})
+                        </button>
+                    </div>
+                )}
+                {tab === 'videos' && isOwner && showAll && shown.length > 0 && (
+                    <p className={styles.profileSectionHint}>بصفتك المالك يمكنك تعديل اسم أو حذف أي فيديو.</p>
                 )}
 
-                {managedVideos.length > 0 ? (
+                {shown.length > 0 ? (
                     <div className={styles.grid}>
-                        {managedVideos.map((video) => (
-                            <VideoCard
-                                key={video.videoId}
-                                video={video}
-                                subtitle={isOwner ? uploaderName(video.uploaderId) : undefined}
-                                onDownload={() => downloadVideo(video)}
-                                onRename={isDemo ? undefined : () => renameVideo(video.videoId, video.title)}
-                                onDelete={isDemo ? undefined : () => deleteVideo(video.videoId, video.title)}
-                            />
-                        ))}
+                        {shown.map((video) => {
+                            const manage = tab === 'videos' && !isDemo
+                            return (
+                                <VideoCard
+                                    key={video.videoId}
+                                    video={video}
+                                    subtitle={isOwner && showAll && tab === 'videos' ? uploaderName(video.uploaderId) : undefined}
+                                    onDownload={() => downloadVideo(video)}
+                                    onRename={manage ? () => renameVideo(video.videoId, video.title) : undefined}
+                                    onDelete={manage ? () => deleteVideo(video.videoId, video.title) : undefined}
+                                />
+                            )
+                        })}
+                    </div>
+                ) : isLoading || (tab !== 'videos' && reactions.mode === 'loading') ? (
+                    <div className={styles.empty}>
+                        <p>جارٍ التحميل…</p>
                     </div>
                 ) : (
                     <div className={styles.empty}>
-                        <h2>{isOwner ? 'لا توجد فيديوهات بعد' : 'لا توجد مرفوعات بعد'}</h2>
-                        <p>
-                            {canUpload
-                                ? 'اضغط على زر "+" في شريط التنقل لرفع أول فيديو لك.'
-                                : 'حسابك يتيح المشاهدة فقط دون الرفع. تواصل مع المالك إذا كنت ترغب في نشر فيديوهات.'}
-                        </p>
+                        <h2>{emptyText[tab].title}</h2>
+                        <p>{emptyText[tab].text}</p>
                     </div>
                 )}
 
-                {!isDemo && (
-                    <>
-                        <h2 className={styles.profileSectionTitle}>روابط المشاركة</h2>
-                        <p className={styles.profileSectionHint}>
-                            {isOwner
-                                ? 'الروابط العامة التي أنشأها جميع الأعضاء. أوقف أي رابط لم يعد مطلوباً.'
-                                : 'الروابط العامة التي أنشأتها لمشاركة الفيديوهات. أوقف أي رابط لم يعد مطلوباً.'}
-                        </p>
-                        <div className={styles.profileShares}>
-                            <ShareList showCreator={isOwner} />
+                {user && (
+                    <details className={profileStyles.settings}>
+                        <summary className={profileStyles.settings__summary}>الإعدادات والحساب</summary>
+
+                        <div className={styles.profileActions}>
+                            {user.role === 'owner' && (
+                                <Link to="/admin" className={styles.profileAction}>
+                                    إدارة المجتمع
+                                </Link>
+                            )}
+                            <button
+                                type="button"
+                                className={styles.profileAction}
+                                onClick={() => setShowPassword((v) => !v)}
+                            >
+                                تغيير كلمة المرور
+                            </button>
+                            <button type="button" className={styles.profileAction} onClick={logout}>
+                                تسجيل الخروج
+                            </button>
+                            <button type="button" className={styles.profileAction} onClick={signOutEverywhere}>
+                                تسجيل الخروج من كل الأجهزة
+                            </button>
                         </div>
-                    </>
+
+                        {showPassword && (
+                            <form className={`${styles.profileForm} ${profileStyles.settings__form}`} onSubmit={submitPassword}>
+                                <input
+                                    className={authStyles.input}
+                                    type="password"
+                                    placeholder="كلمة المرور الحالية"
+                                    autoComplete="current-password"
+                                    value={currentPassword}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    required
+                                />
+                                <input
+                                    className={authStyles.input}
+                                    type="password"
+                                    placeholder="كلمة المرور الجديدة (10 أحرف أو أكثر)"
+                                    autoComplete="new-password"
+                                    minLength={10}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                />
+                                <button type="submit" className={`${authStyles.button} ${authStyles.button_primary}`}>
+                                    حفظ
+                                </button>
+                            </form>
+                        )}
+
+                        {!isDemo && (
+                            <>
+                                <h2 className={styles.profileSectionTitle}>روابط المشاركة</h2>
+                                <p className={styles.profileSectionHint}>
+                                    {isOwner
+                                        ? 'الروابط العامة التي أنشأها جميع الأعضاء. أوقف أي رابط لم يعد مطلوباً.'
+                                        : 'الروابط العامة التي أنشأتها لمشاركة الفيديوهات. أوقف أي رابط لم يعد مطلوباً.'}
+                                </p>
+                                <div className={styles.profileShares}>
+                                    <ShareList showCreator={isOwner} />
+                                </div>
+                            </>
+                        )}
+                    </details>
+                )}
+
+                {message && (
+                    <p className={`${message.ok ? authStyles.success : authStyles.error} ${profileStyles.message}`} role="status">
+                        {message.text}
+                    </p>
                 )}
             </main>
         </div>

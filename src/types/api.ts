@@ -38,12 +38,25 @@ export interface VideoMeta {
     processing: string
 }
 
+/** httpapi.VideoSocial: community totals for one item. */
 export interface VideoSocial {
     likes: number
     bookmarks: number
 }
 
-export type SocialKey = keyof VideoSocial
+export type ReactionKind = 'like' | 'save'
+
+/** reactions.Entry */
+export interface ReactionEntry {
+    mediaId: string
+    at: string
+}
+
+/** reactions.Lists: the signed-in member's own likes and saves, newest first. */
+export interface Reactions {
+    likes: ReactionEntry[]
+    saves: ReactionEntry[]
+}
 
 /** httpapi.VideosResponse */
 export interface VideosResponse {

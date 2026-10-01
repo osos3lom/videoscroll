@@ -5,6 +5,7 @@ import (
 
 	"github.com/osos3lom/videoscroll/server/internal/jobs"
 	"github.com/osos3lom/videoscroll/server/internal/media"
+	"github.com/osos3lom/videoscroll/server/internal/reactions"
 	"github.com/osos3lom/videoscroll/server/internal/users"
 )
 
@@ -66,7 +67,13 @@ var errorCodes = map[string]string{
 	"expiry must be 1, 7 or 30 days, or 0 for no expiry":            "invalid_request",
 	"too many people are watching shared videos, try again shortly": "public_busy",
 
+	// Likes, saves and collections
+	"media not found":                 "media_not_found",
+	reactions.ErrLimit.Error():         "too_many_items",
+	"too many items in one request":   "invalid_request",
+
 	// Unexpected failures: the details are in the server log.
+	"could not save":              "server_error",
 	"could not sign out":          "server_error",
 	"could not change password":   "server_error",
 	"could not create account":    "server_error",

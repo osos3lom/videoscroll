@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -21,17 +20,17 @@ import (
 // VideosResponse is mirrored by `VideosResponse` in src/types/api.ts.
 type VideosResponse struct {
 	Data                []media.Meta               `json:"data"`
-	Social              map[string]json.RawMessage `json:"social"`
-	MediaToken          string                     `json:"mediaToken"`
-	MediaTokenExpiresAt time.Time                  `json:"mediaTokenExpiresAt"`
-	User                users.Public               `json:"user"`
+	Social              map[string]VideoSocial `json:"social"`
+	MediaToken          string                 `json:"mediaToken"`
+	MediaTokenExpiresAt time.Time              `json:"mediaTokenExpiresAt"`
+	User                users.Public           `json:"user"`
 }
 
 func (s *Server) handleListVideos(w http.ResponseWriter, _ *http.Request, user users.User) {
 	token, claims := s.signer.IssueMedia(user.ID, user.Ver)
 	writeJSON(w, http.StatusOK, VideosResponse{
 		Data:                s.index.List(),
-		Social:              s.social,
+		Social:              s.socialCounts(),
 		MediaToken:          token,
 		MediaTokenExpiresAt: claims.ExpiresAt(),
 		User:                user.Public(),
@@ -92,6 +91,7 @@ func (s *Server) handleDeleteVideo(w http.ResponseWriter, r *http.Request, user 
 		// The links are dead anyway: publicShare requires a published video.
 		slog.Warn("stop share links of deleted video", "err", err)
 	}
+	s.forgetMedia(meta.VideoID)
 	w.WriteHeader(http.StatusNoContent)
 }
 

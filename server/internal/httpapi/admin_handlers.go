@@ -89,6 +89,9 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, owner 
 			// Harmless: publicShare also requires the creator to exist.
 			slog.Warn("stop share links of deleted account", "err", err)
 		}
+		if err := s.reactions.DeleteUser(id); err != nil {
+			slog.Warn("forget reactions of deleted account", "err", err)
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

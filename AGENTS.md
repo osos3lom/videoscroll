@@ -33,6 +33,7 @@ src/                    browser only
   lib/mediaCache/       chunkStore (IndexedDB, DOM-free), prefetcher, network hints
   sw/sw.ts              service worker: serves cached video ranges
   hooks/useVideos.ts    the single source of video data
+  hooks/useReactions.ts the single source of likes and saves (server, per account)
   hooks/useVideoGestures.ts  tap / double-tap skip / horizontal scrub on feed videos
   hooks/useDialog.tsx   in-app confirm and prompt
 server/                 Go module
@@ -41,6 +42,7 @@ server/                 Go module
   internal/config       environment config, media root defaults
   internal/users        users + invites (data/users.json), phone-number usernames
   internal/shares       public share links (data/shares.json), hashed codes
+  internal/reactions    likes and saves, one file per member (data/reactions/<userId>.json)
   internal/media        layout, ids, metadata index, disk free
   internal/probe        ffprobe + MP4 box walker
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
@@ -127,6 +129,12 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
   `tsconfig.sw.json` typechecks it against the WebWorker lib.
 - **Sign-out wipes the media cache** (`clearSession`). Nothing from the
   community stays on a shared device.
+- **Likes and saves belong to the account** (`/api/me/reactions`). The old
+  per-device `videoscroll_social` localStorage is imported once per device
+  and account, then left alone; it is still the store in the demo and against
+  a server that answers 404 there. Deleting media or a member removes their
+  reactions. Saved and Liked live in the profile (`/profile/saved`,
+  `/profile/liked`); `/saved` and `/likes` redirect there.
 - **Wire types are mirrored by hand.** Each interface in `src/types/api.ts`
   names its Go struct; change both together.
 - **No `window.confirm`/`prompt`/`alert`.** Embedded browsers and some

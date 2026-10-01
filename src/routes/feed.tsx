@@ -4,7 +4,7 @@ import VideoComponent from '../components/video'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { usePrefetch } from '../hooks/usePrefetch'
 import { useSession } from '../hooks/useSession'
-import { useSocialStorage } from '../hooks/useSocialStorage'
+import { useReactions } from '../hooks/useReactions'
 import { seekBy } from '../hooks/useVideoGestures'
 import { useVideos } from '../hooks/useVideos'
 import styles from './feed.module.css'
@@ -15,7 +15,7 @@ const FeedPage = () => {
     const { videos, social: serverSocial, isLoading, error } = useVideos()
     const session = useSession()
     const canUpload = session?.user.role === 'owner' || session?.user.role === 'uploader'
-    const [social, handleSocialChange] = useSocialStorage(serverSocial)
+    const reactions = useReactions(serverSocial)
     const containerRef = useRef<HTMLDivElement>(null)
     // Sound is on by default. Where the browser refuses to autoplay it, the
     // video reports back and this flips to muted until the first tap.
@@ -242,7 +242,11 @@ const FeedPage = () => {
                             <VideoComponent
                                 key={video.videoId}
                                 video={video}
-                                social={social[video.videoId]}
+                                reaction={{
+                                    liked: reactions.isLiked(video.videoId),
+                                    saved: reactions.isSaved(video.videoId),
+                                    counts: reactions.counts(video.videoId),
+                                }}
                                 isMuted={isMuted}
                                 isFirst={index === 0}
                                 isNearView={isNear}
@@ -250,7 +254,7 @@ const FeedPage = () => {
                                 onOrientationChange={handleOrientationChange}
                                 onToggleMute={toggleMute}
                                 onAutoplayBlocked={handleAutoplayBlocked}
-                                onSocialChange={handleSocialChange}
+                                onToggleReaction={reactions.toggle}
                                 onEnded={() => handleNextVideo(index)}
                             />
                         )

@@ -1,15 +1,7 @@
 import type { FC, JSX, ReactNode } from 'react'
+import type { IconType } from 'react-icons'
 import { Link, useLocation } from 'react-router'
-import {
-    MdHome,
-    MdOutlineHome,
-    MdFavorite,
-    MdFavoriteBorder,
-    MdBookmark,
-    MdBookmarkBorder,
-    MdPerson,
-    MdOutlinePerson,
-} from 'react-icons/md'
+import { MdHome, MdOutlineHome, MdPerson, MdOutlinePerson } from 'react-icons/md'
 import styles from './navbar.module.css'
 
 interface INavbarProps {
@@ -20,66 +12,57 @@ interface INavbarProps {
     uploadSlot?: ReactNode
 }
 
+interface NavItem {
+    to: string
+    label: string
+    icon: IconType
+    activeIcon: IconType
+    /** Also active on these path prefixes (e.g. /profile/saved). */
+    match: (path: string) => boolean
+}
+
+const before: NavItem[] = [
+    { to: '/', label: 'الرئيسية', icon: MdOutlineHome, activeIcon: MdHome, match: (p) => p === '/' },
+]
+
+const after: NavItem[] = [
+    {
+        to: '/profile',
+        label: 'حسابي',
+        icon: MdOutlinePerson,
+        activeIcon: MdPerson,
+        match: (p) => p === '/profile' || p.startsWith('/profile/'),
+    },
+]
+
+const Item: FC<{ item: NavItem; active: boolean }> = ({ item, active }) => {
+    const Icon = active ? item.activeIcon : item.icon
+    return (
+        <Link
+            to={item.to}
+            className={styles.navbar__item}
+            aria-label={item.label}
+            aria-current={active ? 'page' : undefined}
+        >
+            <Icon size={26} className={active ? styles.navbar__icon_active : styles.navbar__icon} />
+            <span className={`${styles.navbar__label} ${active ? styles.navbar__label_active : ''}`}>{item.label}</span>
+        </Link>
+    )
+}
+
 const Navbar: FC<INavbarProps> = ({ uploadSlot = null }): JSX.Element => {
     const currentPath = useLocation().pathname
-
-    const isFeedActive = currentPath === '/'
-    const isLikesActive = currentPath === '/likes'
-    const isSavedActive = currentPath === '/saved'
-    const isProfileActive = currentPath === '/profile'
 
     return (
         <nav className={styles.navbar}>
             <div className={styles.navbar__container}>
-                {/* Feed Tab */}
-                <Link to="/" className={styles.navbar__item} aria-label="الرئيسية">
-                    {isFeedActive ? (
-                        <MdHome size={28} className={styles.navbar__icon_active} />
-                    ) : (
-                        <MdOutlineHome size={28} className={styles.navbar__icon} />
-                    )}
-                    <span className={`${styles.navbar__label} ${isFeedActive ? styles.navbar__label_active : ''}`}>
-                        الرئيسية
-                    </span>
-                </Link>
-
-                {/* Likes Tab */}
-                <Link to="/likes" className={styles.navbar__item} aria-label="الإعجابات">
-                    {isLikesActive ? (
-                        <MdFavorite size={26} className={styles.navbar__icon_active} />
-                    ) : (
-                        <MdFavoriteBorder size={26} className={styles.navbar__icon} />
-                    )}
-                    <span className={`${styles.navbar__label} ${isLikesActive ? styles.navbar__label_active : ''}`}>
-                        الإعجابات
-                    </span>
-                </Link>
-
+                {before.map((item) => (
+                    <Item key={item.to} item={item} active={item.match(currentPath)} />
+                ))}
                 {uploadSlot}
-
-                {/* Saved Tab */}
-                <Link to="/saved" className={styles.navbar__item} aria-label="المحفوظات">
-                    {isSavedActive ? (
-                        <MdBookmark size={26} className={styles.navbar__icon_active} />
-                    ) : (
-                        <MdBookmarkBorder size={26} className={styles.navbar__icon} />
-                    )}
-                    <span className={`${styles.navbar__label} ${isSavedActive ? styles.navbar__label_active : ''}`}>
-                        المحفوظات
-                    </span>
-                </Link>
-
-                {/* Profile Tab */}
-                <Link to="/profile" className={styles.navbar__item} aria-label="حسابي">
-                    {isProfileActive ? (
-                        <MdPerson size={26} className={styles.navbar__icon_active} />
-                    ) : (
-                        <MdOutlinePerson size={26} className={styles.navbar__icon} />
-                    )}
-                    <span className={`${styles.navbar__label} ${isProfileActive ? styles.navbar__label_active : ''}`}>
-                        حسابي
-                    </span>
-                </Link>
+                {after.map((item) => (
+                    <Item key={item.to} item={item} active={item.match(currentPath)} />
+                ))}
             </div>
         </nav>
     )

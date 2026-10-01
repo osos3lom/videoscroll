@@ -22,6 +22,9 @@ export interface UseVideosResult {
 
 const fetchVideos = () => apiFetch<VideosResponse>('/api/videos')
 
+/** SWR key of the list, for updating it from elsewhere (e.g. like counts). */
+export const videosKey = (userId: string) => ['videos', userId]
+
 /**
  * The app's single source of video data.
  *
@@ -31,7 +34,7 @@ const fetchVideos = () => apiFetch<VideosResponse>('/api/videos')
  */
 export function useVideos(): UseVideosResult {
     const session = useSession()
-    const key = !IS_DEMO && session ? ['videos', session.user.id] : null
+    const key = !IS_DEMO && session ? videosKey(session.user.id) : null
 
     const { data, error, isLoading, mutate } = useSWR<VideosResponse>(key, fetchVideos, {
         revalidateOnFocus: true,

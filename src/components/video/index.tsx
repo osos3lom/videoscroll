@@ -2,17 +2,17 @@ import { FC, JSX, useCallback, useEffect, useRef, useState } from 'react'
 import { MdAspectRatio, MdCropFree, MdFullscreen, MdVolumeOff, MdVolumeUp } from 'react-icons/md'
 import Footer from '../footer'
 import PlayIcon from '../playIcon'
-import Sidebar from '../sidebar'
+import Sidebar, { type ReactionState } from '../sidebar'
 import { useInViewPlayback } from '../../hooks/useInViewPlayback'
 import { useVideoGestures } from '../../hooks/useVideoGestures'
 import { VIDEOS_CHANGED_EVENT } from '../../hooks/useVideos'
-import type { LocalVideo, VideoSocial } from '../../types/api'
+import type { LocalVideo, ReactionKind } from '../../types/api'
 import SeekOverlay from './seekOverlay'
 import styles from './videos.module.css'
 
 export interface IvideosProps {
     video: LocalVideo
-    social?: VideoSocial
+    reaction: ReactionState
     isMuted: boolean
     isFirst?: boolean
     isNearView?: boolean
@@ -21,13 +21,14 @@ export interface IvideosProps {
     onToggleMute: () => void
     /** Autoplay with sound was refused, so this video fell back to muted. */
     onAutoplayBlocked?: () => void
-    onSocialChange: (videoId: string, social: VideoSocial) => void
+    onToggleReaction: (kind: ReactionKind, videoId: string) => void
+    onAddToCollection?: (videoId: string) => void
     onEnded?: () => void
 }
 
 const VideoComponent: FC<IvideosProps> = ({
     video,
-    social,
+    reaction,
     isMuted,
     isFirst = false,
     isNearView = true,
@@ -35,7 +36,8 @@ const VideoComponent: FC<IvideosProps> = ({
     onOrientationChange,
     onToggleMute,
     onAutoplayBlocked,
-    onSocialChange,
+    onToggleReaction,
+    onAddToCollection,
     onEnded,
 }): JSX.Element => {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -276,8 +278,9 @@ const VideoComponent: FC<IvideosProps> = ({
             <Footer video={video} />
             <Sidebar
                 video={video}
-                social={social}
-                onSocialChange={onSocialChange}
+                reaction={reaction}
+                onToggleReaction={onToggleReaction}
+                onAddToCollection={onAddToCollection}
                 isHorizontal={isHorizontal}
             />
         </div>

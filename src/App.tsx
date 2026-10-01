@@ -6,10 +6,8 @@ import { IS_DEMO } from './lib/apiUrl'
 import ChoosePasswordPage from './routes/choosePassword'
 import FeedPage from './routes/feed'
 import JoinPage from './routes/join'
-import LikesPage from './routes/likes'
 import LoginPage from './routes/login'
 import ProfilePage from './routes/profile'
-import SavedPage from './routes/saved'
 import WatchPage from './routes/watch'
 
 // Owner-only, so kept out of the bundle every member downloads.
@@ -56,9 +54,10 @@ function MemberApp() {
         <Layout>
             <Routes>
                 <Route path="/" element={<FeedPage />} />
-                <Route path="/likes" element={<LikesPage />} />
-                <Route path="/saved" element={<SavedPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/profile/:tab?" element={<ProfilePage />} />
+                {/* Saved and Liked moved into the profile; old links keep working. */}
+                <Route path="/likes" element={<Navigate to="/profile/liked" replace />} />
+                <Route path="/saved" element={<Navigate to="/profile/saved" replace />} />
                 {!IS_DEMO && (
                     <Route
                         path="/admin"

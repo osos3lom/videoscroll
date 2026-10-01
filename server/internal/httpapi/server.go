@@ -17,6 +17,7 @@ import (
 	"github.com/osos3lom/videoscroll/server/internal/config"
 	"github.com/osos3lom/videoscroll/server/internal/jobs"
 	"github.com/osos3lom/videoscroll/server/internal/media"
+	"github.com/osos3lom/videoscroll/server/internal/reactions"
 	"github.com/osos3lom/videoscroll/server/internal/shares"
 	"github.com/osos3lom/videoscroll/server/internal/store"
 	"github.com/osos3lom/videoscroll/server/internal/users"
@@ -30,6 +31,8 @@ type Server struct {
 	signer *auth.Signer
 	jobs   *jobs.Manager
 	shares *shares.Store
+
+	reactions *reactions.Store
 
 	// os.Root confines every media open to its directory, whatever the id
 	// decodes to.
@@ -76,8 +79,14 @@ func New(d Deps) (*Server, error) {
 		return nil, err
 	}
 
+	reactionStore, err := reactions.Open(filepath.Join(d.Layout.Data, "reactions"))
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
-		shares: shareStore,
+		shares:    shareStore,
+		reactions: reactionStore,
 		cfg:    d.Config, layout: d.Layout, index: d.Index, users: d.Users, signer: d.Signer, jobs: d.Jobs,
 		videosRoot:  videosRoot,
 		postersRoot: postersRoot,
@@ -136,6 +145,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/video/{id}", s.requireMedia(s.handleVideo))
 	mux.HandleFunc("GET /api/poster/{id}", s.requireMedia(s.handlePoster))
 	mux.HandleFunc("GET /api/download/{id}", s.requireMedia(s.handleDownload))
+
+	mux.HandleFunc("GET /api/me/reactions", s.requireUser(s.handleListReactions))
+	mux.HandleFunc("PUT /api/me/reactions/{kind}/{id}", s.requireUser(s.handleSetReaction))
+	mux.HandleFunc("DELETE /api/me/reactions/{kind}/{id}", s.requireUser(s.handleSetReaction))
+	mux.HandleFunc("POST /api/me/reactions/import", s.requireUser(s.handleImportReactions))
 
 	mux.HandleFunc("POST /api/shares", s.requireUser(s.handleCreateShare))
 	mux.HandleFunc("GET /api/shares", s.requireUser(s.handleListShares))
