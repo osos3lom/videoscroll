@@ -3,8 +3,10 @@ package jobs
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,6 +95,84 @@ func TestCreateValidates(t *testing.T) {
 	m.opts.MinFreeBytes = 1 << 62
 	if _, _, err := m.Create("u1", "ok.mp4", 10, 1); !errors.Is(err, ErrInsufficientStorage) {
 		t.Errorf("disk full: err = %v", err)
+	}
+}
+
+func newImageManager(t *testing.T) *Manager {
+	t.Helper()
+	layout := media.NewLayout(t.TempDir())
+	if err := layout.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	return NewManager(layout, media.NewIndex(layout), nil, Options{
+		MaxUploadBytes: 1 << 30, MaxImageBytes: 1 << 20, Images: media.NewImageIndex(layout),
+	})
+}
+
+func TestImageUploadsAreKindedAndValidated(t *testing.T) {
+	m := newImageManager(t)
+	rec, _, err := m.Create("u1", "Photo.JPG", 100, 1)
+	if err != nil || rec.Kind != KindImage {
+		t.Fatalf("image: %+v %v", rec, err)
+	}
+	if video, _, _ := m.Create("u1", "clip.mov", 100, 1); video.Kind != KindVideo {
+		t.Errorf("video kind = %q", video.Kind)
+	}
+	if _, _, err := m.Create("u1", "IMG_0001.HEIC", 100, 1); !errors.Is(err, ErrHEIC) {
+		t.Errorf("heic: %v", err)
+	}
+	if _, _, err := m.Create("u1", "big.png", 2<<20, 1); !errors.Is(err, ErrImageTooLarge) {
+		t.Errorf("big image: %v", err)
+	}
+
+	// Without an image index, images are refused outright.
+	plain, _ := newManager(t)
+	if _, _, err := plain.Create("u1", "a.jpg", 10, 1); !errors.Is(err, ErrUnsupported) {
+		t.Errorf("no image index: %v", err)
+	}
+}
+
+func TestImageJobsGoAheadOfVideos(t *testing.T) {
+	m := newImageManager(t)
+	finish := func(name string) {
+		rec, _, err := m.Create("u1", name, 4, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := m.Append(rec.ID, "u1", 0, bytes.NewReader([]byte("data"))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	finish("long.mp4")
+	finish("other.mp4")
+	finish("a.jpg")
+	finish("b.png")
+
+	var kinds []string
+	for _, task := range m.pending {
+		kinds = append(kinds, task.kind)
+	}
+	if got := strings.Join(kinds, ","); got != "image,image,record,record" {
+		t.Errorf("queue = %s, want images first, in arrival order", got)
+	}
+}
+
+func TestOpenUploadsPerMemberAreCapped(t *testing.T) {
+	m := newImageManager(t)
+	for i := range maxOpenUploads {
+		if _, _, err := m.Create("u1", fmt.Sprintf("%d.jpg", i), 10, 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err := m.Create("u1", "one-more.jpg", 10, 1); !errors.Is(err, ErrTooManyUploads) {
+		t.Errorf("past the cap: %v", err)
+	}
+	// Resuming an existing upload is always allowed, and others are unaffected.
+	if _, _, err := m.Create("u1", "0.jpg", 10, 1); err != nil {
+		t.Errorf("resume: %v", err)
+	}
+	if _, _, err := m.Create("u2", "a.jpg", 10, 1); err != nil {
+		t.Errorf("another member: %v", err)
 	}
 }
 

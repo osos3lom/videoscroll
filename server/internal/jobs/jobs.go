@@ -53,9 +53,17 @@ const (
 	inboxSettleTime = 30 * time.Second
 )
 
+// Kinds of upload. Inferred from the file name when the upload is created.
+const (
+	KindVideo = "video"
+	KindImage = "image"
+)
+
 type Record struct {
-	ID           string    `json:"id"`
-	UserID       string    `json:"userId,omitempty"`
+	ID     string `json:"id"`
+	UserID string `json:"userId,omitempty"`
+	// Empty in records written before images existed: a video.
+	Kind         string    `json:"kind,omitempty"`
 	FileName     string    `json:"fileName"`
 	Size         int64     `json:"size"`
 	LastModified int64     `json:"lastModified,omitempty"`
@@ -75,7 +83,17 @@ var (
 	ErrBusy                = errors.New("another request is already writing this upload")
 	ErrWrongState          = errors.New("upload is not accepting data")
 	ErrExceedsDeclaredSize = errors.New("chunk goes past the declared file size")
+	ErrHEIC                = errors.New("HEIC photos are not supported; choose JPEG")
+	ErrImageTooLarge       = errors.New("image exceeds the upload size limit")
+	ErrTooManyUploads      = errors.New("too many unfinished uploads; finish or cancel some first")
 )
+
+// maxOpenUploads bounds one member's unfinished uploads: enough for a batch
+// of 20 images plus a few abandoned ones.
+const maxOpenUploads = 40
+
+// IsImage reports whether a record is an image upload.
+func (r Record) IsImage() bool { return r.Kind == KindImage }
 
 // OffsetMismatchError carries the server's actual offset so the client can
 // resume from it.
@@ -88,16 +106,25 @@ func (e OffsetMismatchError) Error() string {
 type Options struct {
 	MinFreeBytes   int64
 	MaxUploadBytes int64
+	// MaxImageBytes caps one image; 0 means 50 MB.
+	MaxImageBytes int64
+	// Images is the image index. Nil refuses image uploads.
+	Images *media.Index
 }
 
 type task struct {
-	kind string // "record", "backfill" or "poster"
+	kind string // "record", "image", "backfill", "backfill-image" or "poster"
 	id   string // record id or file name
 }
+
+// light tasks are quick, so they go ahead of waiting video work instead of
+// sitting behind an hour-long transcode.
+func (t task) light() bool { return t.kind == "image" || t.kind == "backfill-image" }
 
 type Manager struct {
 	layout   media.Layout
 	index    *media.Index
+	images   *media.Index
 	pipeline *process.Pipeline
 	opts     Options
 
@@ -111,9 +138,13 @@ type Manager struct {
 }
 
 func NewManager(layout media.Layout, index *media.Index, pipeline *process.Pipeline, opts Options) *Manager {
+	if opts.MaxImageBytes <= 0 {
+		opts.MaxImageBytes = 50 << 20
+	}
 	return &Manager{
 		layout:   layout,
 		index:    index,
+		images:   opts.Images,
 		pipeline: pipeline,
 		opts:     opts,
 		records:  make(map[string]*Record),
@@ -160,8 +191,16 @@ func (m *Manager) Recover() {
 				m.discardLocked(r.ID)
 			}
 		case StateQueued, StateProcessing:
+			published := m.index
+			if r.IsImage() {
+				published = m.images
+			}
+			if published == nil {
+				m.failLocked(r, "images are not enabled")
+				continue
+			}
 			// Published already, but the crash hit before the record said so.
-			if meta, ok := m.index.BySourceID(r.ID); ok {
+			if meta, ok := published.BySourceID(r.ID); ok {
 				r.State, r.VideoID = StateReady, meta.VideoID
 				_ = m.saveLocked(r)
 				_ = os.Remove(m.srcPath(r.ID))
@@ -173,7 +212,7 @@ func (m *Manager) Recover() {
 			}
 			r.State = StateQueued
 			_ = m.saveLocked(r)
-			m.enqueueLocked(task{kind: "record", id: r.ID})
+			m.enqueueLocked(recordTask(r))
 		case StateReady:
 			if age > readyRecordAge {
 				m.discardLocked(r.ID)
@@ -227,20 +266,51 @@ func uploadID(userID, fileName string, size, lastModified int64) string {
 	return hex.EncodeToString(h.Sum(nil)[:12])
 }
 
+func recordTask(r *Record) task {
+	if r.IsImage() {
+		return task{kind: "image", id: r.ID}
+	}
+	return task{kind: "record", id: r.ID}
+}
+
 // Create starts an upload or returns the existing one for the same file.
+// Whether it is a video or an image follows from the file name.
 func (m *Manager) Create(userID, fileName string, size, lastModified int64) (Record, int64, error) {
 	fileName = filepath.Base(strings.TrimSpace(fileName))
-	if !media.IsInputFile(fileName) {
+	kind := ""
+	switch {
+	case media.IsInputFile(fileName):
+		kind = KindVideo
+		if size <= 0 || size > m.opts.MaxUploadBytes {
+			return Record{}, 0, ErrTooLarge
+		}
+	case media.IsImageFile(fileName) && m.images != nil:
+		kind = KindImage
+		if size <= 0 || size > m.opts.MaxImageBytes {
+			return Record{}, 0, ErrImageTooLarge
+		}
+	case media.IsHEIC(fileName):
+		return Record{}, 0, ErrHEIC
+	default:
 		return Record{}, 0, ErrUnsupported
-	}
-	if size <= 0 || size > m.opts.MaxUploadBytes {
-		return Record{}, 0, ErrTooLarge
 	}
 
 	id := uploadID(userID, fileName, size, lastModified)
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if r, ok := m.records[id]; !ok || r.State == StateFailed {
+		open := 0
+		for _, other := range m.records {
+			if other.UserID == userID && other.State == StateUploading {
+				open++
+			}
+		}
+		if open >= maxOpenUploads {
+			return Record{}, 0, ErrTooManyUploads
+		}
+	}
 
 	if r, ok := m.records[id]; ok {
 		if r.State != StateFailed {
@@ -258,7 +328,7 @@ func (m *Manager) Create(userID, fileName string, size, lastModified int64) (Rec
 
 	now := time.Now().UTC()
 	r := &Record{
-		ID: id, UserID: userID, FileName: fileName, Size: size, LastModified: lastModified,
+		ID: id, UserID: userID, Kind: kind, FileName: fileName, Size: size, LastModified: lastModified,
 		Source: "upload", State: StateUploading, CreatedAt: now,
 	}
 	f, err := os.OpenFile(m.partPath(id), os.O_CREATE|os.O_WRONLY, 0o640)
@@ -367,7 +437,7 @@ func (m *Manager) Append(id, userID string, offset int64, body io.Reader) (Recor
 		if err := m.saveLocked(r); err != nil {
 			return *r, received, err
 		}
-		m.enqueueLocked(task{kind: "record", id: id})
+		m.enqueueLocked(recordTask(r))
 		return *r, received, nil
 	}
 
@@ -461,6 +531,15 @@ func (m *Manager) Backfill(fileNames []string) {
 	}
 }
 
+// BackfillImages registers photos placed in images/ by hand.
+func (m *Manager) BackfillImages(fileNames []string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, name := range fileNames {
+		m.enqueueLocked(task{kind: "backfill-image", id: name})
+	}
+}
+
 // QueueMissingPosters regenerates posters that are absent for listed videos.
 func (m *Manager) QueueMissingPosters() {
 	m.mu.Lock()
@@ -478,7 +557,16 @@ func (m *Manager) enqueueLocked(t task) {
 		return
 	}
 	m.queued[key] = true
-	m.pending = append(m.pending, t)
+	if t.light() {
+		// After other light tasks, before the first heavy one.
+		at := 0
+		for at < len(m.pending) && m.pending[at].light() {
+			at++
+		}
+		m.pending = append(m.pending[:at], append([]task{t}, m.pending[at:]...)...)
+	} else {
+		m.pending = append(m.pending, t)
+	}
 	select {
 	case m.wake <- struct{}{}:
 	default:
@@ -548,7 +636,11 @@ func (m *Manager) runTask(ctx context.Context, t task) {
 				slog.Error("poster failed", "video", meta.FileName, "err", err)
 			}
 		}
-	case "record":
+	case "backfill-image":
+		if err := m.pipeline.BackfillImage(t.id); err != nil && ctx.Err() == nil {
+			slog.Error("image backfill failed", "file", t.id, "err", err)
+		}
+	case "record", "image":
 		m.processRecord(ctx, t.id)
 	}
 }
@@ -569,9 +661,16 @@ func (m *Manager) processRecord(ctx context.Context, id string) {
 		UploadedAt:   time.Now(),
 		SourceID:     id,
 	}
+	isImage := r.IsImage()
 	m.mu.Unlock()
 
-	meta, err := m.pipeline.Publish(ctx, input)
+	var meta media.Meta
+	var err error
+	if isImage {
+		meta, err = m.pipeline.PublishImage(input)
+	} else {
+		meta, err = m.pipeline.Publish(ctx, input)
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()

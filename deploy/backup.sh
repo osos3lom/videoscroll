@@ -7,8 +7,9 @@
 #   BACKUP_DIR=/mnt/videoscroll-backup     (the USB disk's mount point)
 #
 # Layout on the backup disk:
-#   videoscroll/videos/ posters/ meta/     mirror of the media disk
-#   videoscroll/data-snapshots/            dated tarballs of accounts + secret
+#   videoscroll/videos/ images/ posters/ meta/   mirror of the media disk
+#   videoscroll/data-snapshots/            dated tarballs of data/: accounts,
+#                                          secret, likes, collections, links
 #   videoscroll/last-success               read by `videoscroll doctor`
 set -euo pipefail
 
@@ -34,7 +35,9 @@ if [[ "$(date +%u)" == 7 ]]; then
     delete_flag=(--delete)
 fi
 
-for dir in videos posters meta; do
+for dir in videos images posters meta; do
+    # images/ appears with server version 4; an older server has none.
+    [[ -d "$MEDIA_DIR/$dir" ]] || continue
     rsync -a "${delete_flag[@]}" \
         --exclude '*.tmp' --exclude '*.part' --exclude '.*' \
         "$MEDIA_DIR/$dir/" "$dest/$dir/"

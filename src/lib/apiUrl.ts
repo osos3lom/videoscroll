@@ -39,6 +39,16 @@ export function posterUrl(videoId: string, mediaToken: string): string {
     return apiUrl(`/api/poster/${encodeURIComponent(videoId)}?t=${encodeURIComponent(mediaToken)}`)
 }
 
+/** A private image, for its uploader. `download` asks for an attachment. */
+export function imageSrc(imageId: string, mediaToken: string, download = false): string {
+    const extra = download ? '&download=1' : ''
+    return apiUrl(`/api/image/${encodeURIComponent(imageId)}?t=${encodeURIComponent(mediaToken)}${extra}`)
+}
+
+export function imageThumbUrl(imageId: string, mediaToken: string): string {
+    return apiUrl(`/api/image-thumb/${encodeURIComponent(imageId)}?t=${encodeURIComponent(mediaToken)}`)
+}
+
 /*
  * Public share links. The code goes in the query (as `s`), where the
  * server's log filter strips it; the page that uses them keeps it in the
@@ -53,6 +63,19 @@ export const publicDownloadUrl = (code: string) => publicApi('download', code)
 /** The page a share link opens: `…/videoscroll/watch#<code>`. */
 export function shareLink(code: string): string {
     return new URL(`${import.meta.env.BASE_URL}watch#${code}`, window.location.origin).href
+}
+
+/* A public collection: the same pattern, one code for the whole collection
+ * and `i` naming an item by its key. */
+export const publicCollectionUrl = (code: string) => publicApi('collection', code)
+const publicCollectionItem = (kind: string, code: string, key: string) =>
+    apiUrl(`/api/public/collection/${kind}?s=${encodeURIComponent(code)}&i=${encodeURIComponent(key)}`)
+export const publicCollectionMediaUrl = (code: string, key: string) => publicCollectionItem('media', code, key)
+export const publicCollectionPosterUrl = (code: string, key: string) => publicCollectionItem('poster', code, key)
+
+/** The page a public collection opens: `…/videoscroll/collection#<code>`. */
+export function collectionLink(code: string): string {
+    return new URL(`${import.meta.env.BASE_URL}collection#${code}`, window.location.origin).href
 }
 
 /**

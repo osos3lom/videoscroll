@@ -17,8 +17,12 @@ import (
 // the video file: the listing is built from these, and the client uses
 // width/height to lay out before the first byte of video arrives, and bitrate
 // to size its prefetch.
+//
+// Images use the same document: VideoID holds the image id (`i-…`), Kind is
+// "image", and the video-only fields stay empty.
 type Meta struct {
 	VideoID    string    `json:"videoId"`
+	Kind       string    `json:"kind,omitempty"`
 	FileName   string    `json:"fileName"`
 	Title      string    `json:"title"`
 	Size       int64     `json:"size"`
@@ -38,19 +42,47 @@ type Meta struct {
 	SourceID string `json:"sourceId,omitempty"`
 }
 
+// KindImage marks image metadata.
+const KindImage = "image"
+
+// kind is what differs between the video and the image index.
+type kind struct {
+	dir    string
+	id     func(fileName string) string
+	isFile func(name string) bool
+	name   func(id string) string
+}
+
 // Index is the in-memory listing. Reads never touch the disk, which matters
 // on an HDD where a directory scan with a stat per file can take seconds.
+//
+// There is one Index per kind, so a code path that serves videos can never
+// return an image, and the reverse.
 type Index struct {
 	layout Layout
+	kind   kind
 
 	mu     sync.RWMutex
 	byID   map[string]Meta
 	sorted []Meta
 }
 
+// NewIndex lists videos/.
 func NewIndex(layout Layout) *Index {
-	return &Index{layout: layout, byID: make(map[string]Meta)}
+	return &Index{layout: layout, byID: make(map[string]Meta), kind: kind{
+		dir: layout.Videos, id: VideoID, isFile: IsVideoFile, name: FileNameFromID,
+	}}
 }
+
+// NewImageIndex lists images/.
+func NewImageIndex(layout Layout) *Index {
+	return &Index{layout: layout, byID: make(map[string]Meta), kind: kind{
+		dir: layout.Images, id: ImageID, isFile: IsImageFile, name: ImageFileNameFromID,
+	}}
+}
+
+// Dir is where this index's files live.
+func (ix *Index) Dir() string { return ix.kind.dir }
 
 func (ix *Index) MetaPath(videoID string) string {
 	return filepath.Join(ix.layout.Meta, filepath.Base(videoID)+".json")
@@ -59,7 +91,7 @@ func (ix *Index) MetaPath(videoID string) string {
 // Scan reconciles the index with the disk and returns the published files
 // that have no metadata yet, for the caller to backfill.
 func (ix *Index) Scan() (missing []string, err error) {
-	entries, err := os.ReadDir(ix.layout.Videos)
+	entries, err := os.ReadDir(ix.kind.dir)
 	if err != nil {
 		return nil, err
 	}
@@ -67,10 +99,10 @@ func (ix *Index) Scan() (missing []string, err error) {
 	next := make(map[string]Meta, len(entries))
 	for _, entry := range entries {
 		name := entry.Name()
-		if entry.IsDir() || !IsVideoFile(name) {
+		if entry.IsDir() || !ix.kind.isFile(name) {
 			continue
 		}
-		id := VideoID(name)
+		id := ix.kind.id(name)
 
 		ix.mu.RLock()
 		known, ok := ix.byID[id]
@@ -93,7 +125,7 @@ func (ix *Index) Scan() (missing []string, err error) {
 	// the listing until the next scan.
 	for id, meta := range ix.byID {
 		if _, seen := next[id]; !seen {
-			if _, err := os.Stat(filepath.Join(ix.layout.Videos, meta.FileName)); err == nil {
+			if _, err := os.Stat(filepath.Join(ix.kind.dir, meta.FileName)); err == nil {
 				next[id] = meta
 			}
 		}
@@ -122,6 +154,19 @@ func (ix *Index) Get(id string) (Meta, bool) {
 	defer ix.mu.RUnlock()
 	m, ok := ix.byID[id]
 	return m, ok
+}
+
+// ListBy is List restricted to one uploader.
+func (ix *Index) ListBy(uploaderID string) []Meta {
+	ix.mu.RLock()
+	defer ix.mu.RUnlock()
+	out := []Meta{}
+	for _, m := range ix.sorted {
+		if m.UploaderID != "" && m.UploaderID == uploaderID {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // List is newest first.
@@ -167,7 +212,7 @@ func (ix *Index) Delete(id string) error {
 		return os.ErrNotExist
 	}
 
-	err := os.Remove(filepath.Join(ix.layout.Videos, meta.FileName))
+	err := os.Remove(filepath.Join(ix.kind.dir, meta.FileName))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -206,11 +251,12 @@ func (ix *Index) PruneOrphanMeta() {
 		if _, ok := ix.Get(id); ok {
 			continue
 		}
-		name := FileNameFromID(id)
+		// The other kind's metadata shares meta/; its ids do not decode here.
+		name := ix.kind.name(id)
 		if name == "" {
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(ix.layout.Videos, name)); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(filepath.Join(ix.kind.dir, name)); errors.Is(err, os.ErrNotExist) {
 			_ = os.Remove(filepath.Join(ix.layout.Meta, entry.Name()))
 		}
 	}

@@ -43,7 +43,7 @@ func (s *Server) socialCounts() map[string]VideoSocial {
 // canSeeMedia: every member sees every video; an image only its uploader
 // and the owner.
 func (s *Server) canSeeMedia(user users.User, mediaID string) bool {
-	_, ok := s.index.Get(mediaID)
+	_, _, ok := s.mediaFor(user, mediaID)
 	return ok
 }
 
@@ -52,6 +52,9 @@ func (s *Server) canSeeMedia(user users.User, mediaID string) bool {
 func (s *Server) forgetMedia(mediaID string) {
 	if err := s.reactions.RemoveMedia(mediaID); err != nil {
 		slog.Warn("forget reactions of deleted media", "err", err)
+	}
+	if err := s.collections.RemoveMedia(mediaID); err != nil {
+		slog.Warn("remove deleted media from collections", "err", err)
 	}
 }
 

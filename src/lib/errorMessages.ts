@@ -48,6 +48,21 @@ const MESSAGES: Record<string, string> = {
     share_not_found: 'هذا الرابط غير صالح، أو انتهت صلاحيته، أو أوقفه صاحبه.',
     not_your_share: 'يمكنك إيقاف روابط المشاركة الخاصة بك فقط.',
     public_busy: 'يشاهد عدد كبير من الأشخاص الآن. حاول مرة أخرى بعد دقيقة.',
+
+    heic_unsupported: 'صيغة HEIC غير مدعومة. اختر الصورة من معرض الصور ليحوّلها الهاتف إلى JPEG.',
+    image_too_large: 'حجم الصورة أكبر من الحد المسموح.',
+    too_many_uploads: 'لديك عمليات رفع كثيرة غير مكتملة. أكملها أو ألغِ بعضها أولاً.',
+    image_not_found: 'الصورة غير موجودة.',
+    media_not_found: 'العنصر غير موجود أو لا يمكنك الوصول إليه.',
+    too_many_items: 'وصلت إلى الحد الأقصى من العناصر.',
+    collection_not_found: 'المجموعة غير موجودة.',
+    item_not_found: 'العنصر غير موجود في المجموعة.',
+    invalid_collection_name: 'يجب أن يكون الاسم من 1 إلى 80 حرفاً.',
+    invalid_description: 'يجب ألا يتجاوز الوصف 500 حرف.',
+    stale_order: 'تغيّرت المجموعة في مكان آخر. أعد فتحها وحاول مرة أخرى.',
+    collection_full: 'تتسع المجموعة لـ 2000 عنصر كحد أقصى.',
+    too_many_collections: 'وصلت إلى الحد الأقصى لعدد المجموعات.',
+    images_only: 'تصنيفات الصور تقبل الصور فقط.',
 }
 
 /** The Arabic message for a server error code, if there is one. */

@@ -1,0 +1,35 @@
+.message {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 32px;
+    text-align: center;
+    color: #e9e9e9;
+    background: #000000;
+}
+
+.message h1 {
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.message p {
+    font-size: 1.4rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.back {
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 999px;
+    border: none;
+    background: #ffffff;
+    color: #000000;
+    font: inherit;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+}

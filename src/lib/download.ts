@@ -10,9 +10,14 @@ import type { LocalVideo } from '../types/api'
  * card is itself a link, and links cannot nest.
  */
 export function downloadVideo(video: LocalVideo): void {
+    saveFile(video.download ?? video.src, downloadFileName(video))
+}
+
+/** Downloads any attachment URL (videos and images alike). */
+export function saveFile(url: string, fileName: string): void {
     const link = document.createElement('a')
-    link.href = video.download ?? video.src
-    link.download = downloadFileName(video)
+    link.href = url
+    link.download = fileName
     link.rel = 'noopener'
     document.body.appendChild(link)
     link.click()

@@ -36,6 +36,8 @@ type Config struct {
 	MinFreeBytes int64
 	// Per-upload ceiling.
 	MaxUploadBytes int64
+	// Per-image ceiling.
+	MaxImageBytes int64
 
 	// Thread cap for a software encode, so one core stays free for serving.
 	FFmpegThreads int
@@ -66,6 +68,9 @@ func Load() (Config, error) {
 		return c, err
 	}
 	if c.MaxUploadBytes, err = envInt64("MAX_UPLOAD_BYTES", 20<<30); err != nil {
+		return c, err
+	}
+	if c.MaxImageBytes, err = envInt64("MAX_IMAGE_UPLOAD_BYTES", 50<<20); err != nil {
 		return c, err
 	}
 	if c.FFmpegThreads, err = envInt("FFMPEG_THREADS", 3); err != nil {

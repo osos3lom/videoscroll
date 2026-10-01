@@ -92,6 +92,10 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request, owner 
 		if err := s.reactions.DeleteUser(id); err != nil {
 			slog.Warn("forget reactions of deleted account", "err", err)
 		}
+		// Their collections only; the videos and images stay.
+		if err := s.collections.DeleteByOwner(id); err != nil {
+			slog.Warn("delete collections of deleted account", "err", err)
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

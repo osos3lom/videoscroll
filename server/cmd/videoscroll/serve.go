@@ -53,19 +53,26 @@ func cmdServe(args []string) error {
 	if err != nil {
 		return fmt.Errorf("scanning videos: %w", err)
 	}
+	images := media.NewImageIndex(layout)
+	missingImages, err := images.Scan()
+	if err != nil {
+		return fmt.Errorf("scanning images: %w", err)
+	}
 
 	runner := &process.Runner{Threads: cfg.FFmpegThreads, Timeout: cfg.TranscodeTimeout, VAAPIDevice: cfg.VAAPIDevice}
-	pipeline := &process.Pipeline{Layout: layout, Index: index, Runner: runner}
+	pipeline := &process.Pipeline{Layout: layout, Index: index, Images: images, Runner: runner}
 	manager := jobs.NewManager(layout, index, pipeline, jobs.Options{
 		MinFreeBytes: cfg.MinFreeBytes, MaxUploadBytes: cfg.MaxUploadBytes,
+		MaxImageBytes: cfg.MaxImageBytes, Images: images,
 	})
 	manager.Recover()
 	manager.Backfill(missing)
+	manager.BackfillImages(missingImages)
 	manager.QueueMissingPosters()
 	manager.ScanInbox()
 
 	api, err := httpapi.New(httpapi.Deps{
-		Config: cfg, Layout: layout, Index: index, Users: userStore,
+		Config: cfg, Layout: layout, Index: index, Images: images, Users: userStore,
 		Signer: auth.NewSigner(secret), Jobs: manager,
 	})
 	if err != nil {
@@ -84,7 +91,7 @@ func cmdServe(args []string) error {
 	}()
 	go func() {
 		defer workers.Done()
-		maintenance(ctx, index, manager, api)
+		maintenance(ctx, index, images, manager, api)
 	}()
 
 	srv := &http.Server{
@@ -123,7 +130,7 @@ func cmdServe(args []string) error {
 	return nil
 }
 
-func maintenance(ctx context.Context, index *media.Index, manager *jobs.Manager, api *httpapi.Server) {
+func maintenance(ctx context.Context, index, images *media.Index, manager *jobs.Manager, api *httpapi.Server) {
 	rescan := time.NewTicker(60 * time.Second)
 	hourly := time.NewTicker(time.Hour)
 	defer rescan.Stop()
@@ -138,11 +145,15 @@ func maintenance(ctx context.Context, index *media.Index, manager *jobs.Manager,
 			if missing, err := index.Scan(); err == nil {
 				manager.Backfill(missing)
 			}
+			if missing, err := images.Scan(); err == nil {
+				manager.BackfillImages(missing)
+			}
 			manager.ScanInbox()
 			api.SweepLimiters()
 		case <-hourly.C:
 			manager.Sweep()
 			index.PruneOrphanMeta()
+			images.PruneOrphanMeta()
 		}
 	}
 }

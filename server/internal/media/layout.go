@@ -14,7 +14,9 @@ type Layout struct {
 	Root string
 	// Published, playable files. A file appears here only once it is final.
 	Videos string
-	// One poster image per video id.
+	// Published photos, kept as uploaded. Private to their uploader.
+	Images string
+	// One poster image per video id, and one thumbnail per image id.
 	Posters string
 	// One JSON document per video id. Written before the video is published.
 	Meta string
@@ -33,6 +35,7 @@ func NewLayout(root string) Layout {
 	return Layout{
 		Root:     root,
 		Videos:   filepath.Join(root, "videos"),
+		Images:   filepath.Join(root, "images"),
 		Posters:  filepath.Join(root, "posters"),
 		Meta:     filepath.Join(root, "meta"),
 		Incoming: filepath.Join(root, "incoming"),
@@ -43,7 +46,7 @@ func NewLayout(root string) Layout {
 }
 
 func (l Layout) Ensure() error {
-	for _, dir := range []string{l.Videos, l.Posters, l.Meta, l.Incoming, l.Inbox, l.Failed} {
+	for _, dir := range []string{l.Videos, l.Images, l.Posters, l.Meta, l.Incoming, l.Inbox, l.Failed} {
 		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return err
 		}
@@ -124,6 +127,63 @@ func FileNameFromID(id string) string {
 	}
 	name := string(raw)
 	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) || !IsVideoFile(name) {
+		return ""
+	}
+	return name
+}
+
+// Image files, by extension, and their content types. HEIC is deliberately
+// absent: browsers outside Safari cannot show it, and iOS converts to JPEG
+// when a web page picks a photo.
+var imageExtensions = map[string]string{
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png":  "image/png",
+	".webp": "image/webp",
+	".gif":  "image/gif",
+}
+
+// IsImageFile reports whether name is a published, servable image.
+func IsImageFile(name string) bool {
+	lower := strings.ToLower(name)
+	if name == "" || isTransient(lower) {
+		return false
+	}
+	_, ok := imageExtensions[filepath.Ext(lower)]
+	return ok
+}
+
+// IsHEIC is for a clearer refusal than "unsupported format".
+func IsHEIC(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	return ext == ".heic" || ext == ".heif"
+}
+
+func ImageMimeType(name string) string {
+	if t, ok := imageExtensions[strings.ToLower(filepath.Ext(name))]; ok {
+		return t
+	}
+	return "application/octet-stream"
+}
+
+// ImageID is `i-` + base64url(fileName): the image counterpart of VideoID,
+// with the same rule that a published file is never renamed. The prefixes
+// keep the two kinds apart in meta/ and posters/.
+func ImageID(fileName string) string {
+	return "i-" + base64.RawURLEncoding.EncodeToString([]byte(fileName))
+}
+
+// ImageFileNameFromID reverses ImageID, returning "" for anything malformed.
+func ImageFileNameFromID(id string) string {
+	if !strings.HasPrefix(id, "i-") {
+		return ""
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(id[2:])
+	if err != nil {
+		return ""
+	}
+	name := string(raw)
+	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) || !IsImageFile(name) {
 		return ""
 	}
 	return name

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { MdFitScreen, MdStayCurrentPortrait } from 'react-icons/md'
+import AddToCollection from '../components/addToCollection'
 import VideoComponent from '../components/video'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { usePrefetch } from '../hooks/usePrefetch'
@@ -12,7 +13,8 @@ import styles from './feed.module.css'
 const FeedPage = () => {
     useDocumentTitle('VideoScroll')
 
-    const { videos, social: serverSocial, isLoading, error } = useVideos()
+    const { videos, social: serverSocial, isLoading, error, isDemo } = useVideos()
+    const [addingTo, setAddingTo] = useState<string | null>(null)
     const session = useSession()
     const canUpload = session?.user.role === 'owner' || session?.user.role === 'uploader'
     const reactions = useReactions(serverSocial)
@@ -255,6 +257,7 @@ const FeedPage = () => {
                                 onToggleMute={toggleMute}
                                 onAutoplayBlocked={handleAutoplayBlocked}
                                 onToggleReaction={reactions.toggle}
+                                onAddToCollection={isDemo ? undefined : setAddingTo}
                                 onEnded={() => handleNextVideo(index)}
                             />
                         )
@@ -290,6 +293,7 @@ const FeedPage = () => {
                     )}
                 </div>
             </main>
+            {addingTo && <AddToCollection mediaId={addingTo} kind="video" onClose={() => setAddingTo(null)} />}
         </div>
     )
 }

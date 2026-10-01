@@ -1,6 +1,9 @@
+import { execFileSync } from 'node:child_process'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import type { Page } from '@playwright/test'
-import type { SessionResponse } from '../src/types/api'
+import type { SessionResponse, UploadStatus } from '../src/types/api'
 
 export const api = () => process.env.E2E_API ?? 'http://localhost:3101'
 export const web = () => process.env.E2E_WEB ?? 'http://localhost:4175'
@@ -77,6 +80,36 @@ export function sessionStorageState(session: SessionResponse) {
             },
         ],
     }
+}
+
+/**
+ * Makes a test photo with ffmpeg and publishes it through the upload API as
+ * the member with `token`. Resolves with the image id.
+ */
+export async function uploadImage(token: string, name: string, source = 'testsrc2=size=1080x1440'): Promise<string> {
+    const file = path.join(E2E_DIR, name)
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', source, '-frames:v', '1', file])
+    const data = fs.readFileSync(file)
+    let { body: status } = await apiFetch<UploadStatus>('/api/uploads', {
+        method: 'POST',
+        token,
+        json: { fileName: name, size: data.length, lastModified: Date.now() },
+    })
+    if (status.state === 'uploading') {
+        ;({ body: status } = await apiFetch<UploadStatus>(`/api/uploads/${status.uploadId}`, {
+            method: 'PUT',
+            token,
+            body: data,
+            headers: { 'Upload-Offset': '0' },
+        }))
+    }
+    for (let i = 0; i < 120 && status.state !== 'ready'; i++) {
+        if (status.state === 'failed') throw new Error(`image ${name} failed: ${status.error}`)
+        await new Promise((resolve) => setTimeout(resolve, 250))
+        ;({ body: status } = await apiFetch<UploadStatus>(`/api/uploads/${status.uploadId}`, { token }))
+    }
+    if (!status.videoId) throw new Error(`image ${name} was not published`)
+    return status.videoId
 }
 
 /** Collects uncaught errors and console errors for later assertion. */

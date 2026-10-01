@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/osos3lom/videoscroll/server/internal/auth"
+	"github.com/osos3lom/videoscroll/server/internal/collections"
 	"github.com/osos3lom/videoscroll/server/internal/config"
 	"github.com/osos3lom/videoscroll/server/internal/jobs"
 	"github.com/osos3lom/videoscroll/server/internal/media"
@@ -31,12 +32,15 @@ type Server struct {
 	signer *auth.Signer
 	jobs   *jobs.Manager
 	shares *shares.Store
-
-	reactions *reactions.Store
+	// Images are a separate index, so no video route can ever serve one.
+	images      *media.Index
+	reactions   *reactions.Store
+	collections *collections.Store
 
 	// os.Root confines every media open to its directory, whatever the id
 	// decodes to.
 	videosRoot  *os.Root
+	imagesRoot  *os.Root
 	postersRoot *os.Root
 
 	// Login failures, counted per address, per (address, account), and per
@@ -59,13 +63,25 @@ type Deps struct {
 	Config config.Config
 	Layout media.Layout
 	Index  *media.Index
+	// Images defaults to an empty image index.
+	Images *media.Index
 	Users  *users.Store
 	Signer *auth.Signer
 	Jobs   *jobs.Manager
 }
 
 func New(d Deps) (*Server, error) {
+	if d.Images == nil {
+		d.Images = media.NewImageIndex(d.Layout)
+	}
 	videosRoot, err := os.OpenRoot(d.Layout.Videos)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(d.Layout.Images, 0o750); err != nil {
+		return nil, err
+	}
+	imagesRoot, err := os.OpenRoot(d.Layout.Images)
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +100,19 @@ func New(d Deps) (*Server, error) {
 		return nil, err
 	}
 
+	collectionStore, err := collections.Open(filepath.Join(d.Layout.Data, "collections"))
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
-		shares:    shareStore,
-		reactions: reactionStore,
-		cfg:    d.Config, layout: d.Layout, index: d.Index, users: d.Users, signer: d.Signer, jobs: d.Jobs,
+		shares:      shareStore,
+		images:      d.Images,
+		reactions:   reactionStore,
+		collections: collectionStore,
+		cfg:         d.Config, layout: d.Layout, index: d.Index, users: d.Users, signer: d.Signer, jobs: d.Jobs,
 		videosRoot:  videosRoot,
+		imagesRoot:  imagesRoot,
 		postersRoot: postersRoot,
 		loginByIP:   auth.NewLimiter(20, 15*time.Minute),
 		loginByPair: auth.NewLimiter(10, 15*time.Minute),
@@ -108,6 +132,7 @@ func New(d Deps) (*Server, error) {
 // Close releases the directory handles held by the media roots.
 func (s *Server) Close() {
 	_ = s.videosRoot.Close()
+	_ = s.imagesRoot.Close()
 	_ = s.postersRoot.Close()
 }
 
@@ -151,6 +176,25 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/me/reactions/{kind}/{id}", s.requireUser(s.handleSetReaction))
 	mux.HandleFunc("POST /api/me/reactions/import", s.requireUser(s.handleImportReactions))
 
+	// Images are private: every route checks the caller may see the image.
+	mux.HandleFunc("GET /api/images", s.requireUser(s.handleListImages))
+	mux.HandleFunc("PATCH /api/images/{id}", s.requireUser(s.handleUpdateImage))
+	mux.HandleFunc("DELETE /api/images/{id}", s.requireUser(s.handleDeleteImage))
+	mux.HandleFunc("GET /api/image/{id}", s.requireMediaUser(s.handleImage))
+	mux.HandleFunc("GET /api/image-thumb/{id}", s.requireMediaUser(s.handleImageThumb))
+
+	// Collections are reachable by their owner only; a public link goes
+	// through /api/public/collection instead.
+	mux.HandleFunc("GET /api/collections", s.requireUser(s.handleListCollections))
+	mux.HandleFunc("POST /api/collections", s.requireUser(s.handleCreateCollection))
+	mux.HandleFunc("GET /api/collections/{id}", s.requireUser(s.handleGetCollection))
+	mux.HandleFunc("PATCH /api/collections/{id}", s.requireUser(s.handleUpdateCollection))
+	mux.HandleFunc("DELETE /api/collections/{id}", s.requireUser(s.handleDeleteCollection))
+	mux.HandleFunc("POST /api/collections/{id}/items", s.requireUser(s.handleAddCollectionItems))
+	mux.HandleFunc("DELETE /api/collections/{id}/items/{itemId}", s.requireUser(s.handleRemoveCollectionItem))
+	mux.HandleFunc("PUT /api/collections/{id}/order", s.requireUser(s.handleReorderCollection))
+	mux.HandleFunc("POST /api/collections/{id}/share/reset", s.requireUser(s.handleResetCollectionShare))
+
 	mux.HandleFunc("POST /api/shares", s.requireUser(s.handleCreateShare))
 	mux.HandleFunc("GET /api/shares", s.requireUser(s.handleListShares))
 	mux.HandleFunc("DELETE /api/shares/{id}", s.requireUser(s.handleDeleteShare))
@@ -161,6 +205,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/public/video", s.handlePublicVideo)
 	mux.HandleFunc("GET /api/public/poster", s.handlePublicPoster)
 	mux.HandleFunc("GET /api/public/download", s.handlePublicDownload)
+	// The same, for a public collection: ?s= unlocks exactly its items.
+	mux.HandleFunc("GET /api/public/collection", s.handlePublicCollection)
+	mux.HandleFunc("GET /api/public/collection/media", s.handlePublicCollectionMedia)
+	mux.HandleFunc("GET /api/public/collection/poster", s.handlePublicCollectionPoster)
 
 	mux.HandleFunc("POST /api/uploads", s.requireUploader(s.handleCreateUpload))
 	mux.HandleFunc("PUT /api/uploads/{id}", s.requireUploader(s.handleAppendUpload))

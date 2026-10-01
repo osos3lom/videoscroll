@@ -15,17 +15,23 @@ import (
 type uploadResponse struct {
 	UploadID  string     `json:"uploadId"`
 	FileName  string     `json:"fileName"`
+	Kind      string     `json:"kind"`
 	Size      int64      `json:"size"`
 	Received  int64      `json:"received"`
 	ChunkSize int        `json:"chunkSize"`
 	State     jobs.State `json:"state"`
-	VideoID   string     `json:"videoId,omitempty"`
-	Error     string     `json:"error,omitempty"`
+	// The published id once ready: a video id, or an image id for images.
+	VideoID string `json:"videoId,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 func toUploadResponse(r jobs.Record, received int64) uploadResponse {
+	kind := jobs.KindVideo
+	if r.IsImage() {
+		kind = jobs.KindImage
+	}
 	return uploadResponse{
-		UploadID: r.ID, FileName: r.FileName, Size: r.Size, Received: received,
+		UploadID: r.ID, FileName: r.FileName, Kind: kind, Size: r.Size, Received: received,
 		ChunkSize: jobs.ChunkSize, State: r.State, VideoID: r.VideoID, Error: r.Error,
 	}
 }
@@ -114,9 +120,11 @@ func (s *Server) writeUploadError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, jobs.ErrNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, jobs.ErrUnsupported):
+	case errors.Is(err, jobs.ErrUnsupported), errors.Is(err, jobs.ErrHEIC):
 		writeError(w, http.StatusUnsupportedMediaType, err.Error())
-	case errors.Is(err, jobs.ErrTooLarge):
+	case errors.Is(err, jobs.ErrTooManyUploads):
+		writeError(w, http.StatusTooManyRequests, err.Error())
+	case errors.Is(err, jobs.ErrTooLarge), errors.Is(err, jobs.ErrImageTooLarge):
 		writeError(w, http.StatusRequestEntityTooLarge, err.Error())
 	case errors.Is(err, jobs.ErrInsufficientStorage):
 		writeError(w, http.StatusInsufficientStorage, err.Error())

@@ -77,10 +77,96 @@ export interface SessionResponse {
 
 export type UploadState = 'uploading' | 'queued' | 'processing' | 'ready' | 'failed'
 
+export type MediaKind = 'video' | 'image'
+
+/** media.Meta for an image (kind "image"; the video-only fields are empty). */
+export interface ImageMeta {
+    /** The image id, `i-…`. The field name is shared with videos. */
+    videoId: string
+    kind: 'image'
+    fileName: string
+    title: string
+    size: number
+    uploadedAt: string
+    uploaderId?: string
+    width: number
+    height: number
+}
+
+/** httpapi.ImagesResponse: the caller's own images. */
+export interface ImagesResponse {
+    data: ImageMeta[]
+    mediaToken: string
+    mediaTokenExpiresAt: string
+}
+
+export type CollectionSection = 'collections' | 'images'
+export type Visibility = 'private' | 'public'
+
+/** httpapi.CollectionItemView */
+export interface CollectionItem {
+    id: string
+    mediaId: string
+    kind: MediaKind
+    addedAt: string
+}
+
+/** httpapi.CollectionView */
+export interface Collection {
+    id: string
+    section: CollectionSection
+    title: string
+    description: string
+    visibility: Visibility
+    coverItemId?: string
+    cover?: CollectionItem
+    itemCount: number
+    videoCount: number
+    imageCount: number
+    /** Present while public: the secret part of the public link. */
+    shareCode?: string
+    createdAt: string
+    updatedAt: string
+    /** Absent in listings fetched without items. */
+    items?: CollectionItem[]
+}
+
+/** httpapi.collectionsResponse */
+export interface CollectionsResponse {
+    collections: Collection[]
+    mediaToken: string
+    mediaTokenExpiresAt: string
+}
+
+/** httpapi.collectionResponse */
+export interface CollectionResponse {
+    collection: Collection
+    mediaToken: string
+    mediaTokenExpiresAt: string
+}
+
+/** httpapi.PublicCollectionItem: no media id, file name or uploader. */
+export interface PublicCollectionItem {
+    key: string
+    kind: MediaKind
+    title: string
+    width: number
+    height: number
+    duration?: number
+}
+
+/** httpapi.PublicCollection */
+export interface PublicCollection {
+    title: string
+    description: string
+    items: PublicCollectionItem[]
+}
+
 /** httpapi.uploadResponse */
 export interface UploadStatus {
     uploadId: string
     fileName: string
+    kind?: MediaKind
     size: number
     received: number
     chunkSize: number

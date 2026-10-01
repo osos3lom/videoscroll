@@ -20,6 +20,8 @@ type Pipeline struct {
 	Layout media.Layout
 	Index  *media.Index
 	Runner *Runner
+	// Images is the image index; nil disables image uploads.
+	Images *media.Index
 
 	posterOnce sync.Once
 	posterWebP bool

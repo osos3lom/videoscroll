@@ -22,8 +22,11 @@ History: this was Next.js, then Vite + Express, now Vite + Go. References to
 index.html              app shell (static meta)
 vite.config.mts         webmanifest, CSP meta, demo clips, sw.js build
 src/                    browser only
-  App.tsx               public /watch page, then the auth gate + member routes
+  App.tsx               public /watch and /collection pages, then the auth gate + member routes
   routes/watch.tsx      public page of one shared video (no account, plain fetch)
+  routes/publicCollection.tsx  public page of one shared collection, as a vertical feed
+  routes/collectionView.tsx    /collections/:id and /images/:id, the two-axis browser
+  components/collectionBrowser  up/down between collections, left/right between items
   lib/accounts.ts       phone display, temporary passwords, the "your account" message
   lib/demoVideos.ts     bundled clips for the no-API Pages build
   types/api.ts          hand-mirrored Go wire types
@@ -34,6 +37,9 @@ src/                    browser only
   sw/sw.ts              service worker: serves cached video ranges
   hooks/useVideos.ts    the single source of video data
   hooks/useReactions.ts the single source of likes and saves (server, per account)
+  hooks/useImages.ts    the member's own (private) images
+  hooks/useMedia.ts     videos + images by id, as MediaEntry for grids and viewers
+  hooks/useCollections.ts  collections per section, and every write to them
   hooks/useVideoGestures.ts  tap / double-tap skip / horizontal scrub on feed videos
   hooks/useDialog.tsx   in-app confirm and prompt
 server/                 Go module
@@ -43,7 +49,9 @@ server/                 Go module
   internal/users        users + invites (data/users.json), phone-number usernames
   internal/shares       public share links (data/shares.json), hashed codes
   internal/reactions    likes and saves, one file per member (data/reactions/<userId>.json)
-  internal/media        layout, ids, metadata index, disk free
+  internal/collections  collections, one file each (data/collections/<id>.json); references only
+  internal/media        layout, ids, metadata index (one per kind: videos, images), disk free
+  internal/imaging      pure-Go image probe, EXIF orientation, thumbnails
   internal/probe        ffprobe + MP4 box walker
   internal/process      move/remux/audio/transcode decision, ffmpeg runner, publish
   internal/jobs         uploads + persistent single-worker queue
@@ -62,7 +70,22 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
 - **Every API route and media byte is authorized server-side.** The SPA's
   login gate is only a convenience. Only two things work without an account:
   `/api/health` (`{"ok":true}`, nothing else) and `/api/public/*`, where a
-  share code (`?s=`) unlocks exactly one video.
+  share code (`?s=`) unlocks exactly one video, or the items of exactly one
+  public collection.
+- **Images are private to their uploader** (the owner sees all of them). Every
+  image route checks it (`canSeeImage`), media bytes included, via
+  `requireMediaUser`; anyone else gets 404. Images live in their own index
+  (`media.NewImageIndex`, ids `i-…`, files in `images/`), so no video route
+  can return one. Image bytes are kept as uploaded; only the thumbnail is
+  decoded (pure Go, EXIF-rotated). Image jobs share the one worker, queued
+  ahead of waiting videos.
+- **Collections only reference media.** Deleting a collection or removing an
+  item never touches a file. Deleting media removes it from every
+  collection and from reactions (`forgetMedia`). A collection is visible to
+  its owner only (404 for anyone else). Its public link is
+  `<id>.<HMAC(secret, id, shareGen)>`, re-derived, never stored; `shareGen++`
+  revokes it. Public items are addressed by their random item id, and a
+  public collection never shows another member's private image.
 - **Public share responses carry nothing about the community**: no video id,
   file name, uploader, or user. Every failure is the same 404
   (`share_not_found`) and counts against the caller's guessing budget. A link
@@ -119,7 +142,7 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
   preflights per URL.
 - **No global `WriteTimeout`/`ReadTimeout` on the HTTP server.** They would cut
   off long streams. Per-request deadlines go through `http.ResponseController`.
-- **Media is opened through `os.Root`** (`videosRoot`, `postersRoot`), never
+- **Media is opened through `os.Root`** (`videosRoot`, `imagesRoot`, `postersRoot`), never
   by joining user input onto a path.
 - **The service worker must fall through to the network** on any miss, unknown
   video, non-range request, or doubt. It only calls `respondWith` when the
@@ -143,6 +166,13 @@ docs/acceptance-checklist.md  real-phone checks before inviting people
 - **Feed gestures use physical directions** (right is forward), not RTL
   mirrored. Seeking fires `canplay`, so anything that auto-plays on it must
   check `isScrubbing()` first.
+- **The collection browser nests two native scroll-snap containers** (rows
+  vertical, each row's track horizontal and `dir="ltr"`), so the browser
+  locks each swipe to one axis. Its videos use `useVideoGestures` with
+  `scrub: false` and `touch-action: pan-x pan-y`: a sideways drag there is a
+  swipe to the next item, never a scrub. `e2e/collections.spec.ts` drives it
+  with real touch events. Moving between items replaces the history entry,
+  so back always leaves the viewer in one step.
 - **Pages scroll themselves.** The layout clips to the viewport, so a
   page's root needs `height: 100%` and `overflow-y: auto`.
 - **Overlays need `createPortal`.** `.navbar` has both a `transform` and a

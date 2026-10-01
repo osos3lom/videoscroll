@@ -1,7 +1,16 @@
 import type { FC, JSX, ReactNode } from 'react'
 import type { IconType } from 'react-icons'
 import { Link, useLocation } from 'react-router'
-import { MdHome, MdOutlineHome, MdPerson, MdOutlinePerson } from 'react-icons/md'
+import {
+    MdCollections,
+    MdHome,
+    MdOutlineCollections,
+    MdOutlineHome,
+    MdOutlinePerson,
+    MdOutlinePhotoLibrary,
+    MdPerson,
+    MdPhotoLibrary,
+} from 'react-icons/md'
 import styles from './navbar.module.css'
 
 interface INavbarProps {
@@ -21,17 +30,27 @@ interface NavItem {
     match: (path: string) => boolean
 }
 
+const under = (prefix: string) => (p: string) => p === prefix || p.startsWith(`${prefix}/`)
+
 const before: NavItem[] = [
     { to: '/', label: 'الرئيسية', icon: MdOutlineHome, activeIcon: MdHome, match: (p) => p === '/' },
+    {
+        to: '/collections',
+        label: 'المجموعات',
+        icon: MdOutlineCollections,
+        activeIcon: MdCollections,
+        match: under('/collections'),
+    },
 ]
 
 const after: NavItem[] = [
+    { to: '/images', label: 'الصور', icon: MdOutlinePhotoLibrary, activeIcon: MdPhotoLibrary, match: under('/images') },
     {
         to: '/profile',
         label: 'حسابي',
         icon: MdOutlinePerson,
         activeIcon: MdPerson,
-        match: (p) => p === '/profile' || p.startsWith('/profile/'),
+        match: under('/profile'),
     },
 ]
 

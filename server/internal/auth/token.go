@@ -91,6 +91,19 @@ func (s *Signer) mac(body string) []byte {
 	return h.Sum(nil)
 }
 
+// MAC is a keyed digest for capabilities the server re-derives instead of
+// storing, such as a public collection link. The prefix keeps it from ever
+// equalling a token signature, whose input is base64 and has no NUL bytes.
+func (s *Signer) MAC(parts ...string) []byte {
+	h := hmac.New(sha256.New, s.secret)
+	h.Write([]byte("videoscroll-mac\x00"))
+	for _, part := range parts {
+		h.Write([]byte(part))
+		h.Write([]byte{0})
+	}
+	return h.Sum(nil)
+}
+
 // Verify checks signature, scope and expiry. It does not check the user's
 // current version — that needs the user store; see Middleware.
 func (s *Signer) Verify(token string, scope Scope) (Claims, error) {

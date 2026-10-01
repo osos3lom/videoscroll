@@ -31,13 +31,22 @@ var slugPattern = regexp.MustCompile(`[^a-z0-9]+`)
 // millisecond prefix is what guarantees a name — and therefore a video id —
 // is never reused, even after a delete.
 func (l Layout) PublishedName(original string, ext string) string {
+	return publishedName(l.Videos, original, ext, "video")
+}
+
+// PublishedImageName is PublishedName for images/.
+func (l Layout) PublishedImageName(original string, ext string) string {
+	return publishedName(l.Images, original, ext, "image")
+}
+
+func publishedName(dir, original, ext, fallback string) string {
 	base := strings.TrimSuffix(filepath.Base(original), filepath.Ext(original))
 	slug := strings.Trim(slugPattern.ReplaceAllString(strings.ToLower(base), "-"), "-")
 	if len(slug) > 60 {
 		slug = strings.Trim(slug[:60], "-")
 	}
 	if slug == "" {
-		slug = "video"
+		slug = fallback
 	}
 
 	for attempt := 0; ; attempt++ {
@@ -45,7 +54,10 @@ func (l Layout) PublishedName(original string, ext string) string {
 		if attempt > 0 {
 			name = fmt.Sprintf("%d-%s-%d%s", time.Now().UnixMilli(), slug, attempt, ext)
 		}
-		if _, err := os.Stat(filepath.Join(l.Videos, name)); errors.Is(err, os.ErrNotExist) {
+		// Both the final name and its .tmp, which a publish in progress holds.
+		_, err := os.Stat(filepath.Join(dir, name))
+		_, errTmp := os.Stat(filepath.Join(dir, name+".tmp"))
+		if errors.Is(err, os.ErrNotExist) && errors.Is(errTmp, os.ErrNotExist) {
 			return name
 		}
 	}

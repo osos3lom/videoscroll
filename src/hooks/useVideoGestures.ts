@@ -74,10 +74,18 @@ export function seekBy(video: HTMLVideoElement, delta: number) {
  * or not. Vertical drags are left to the browser, which scrolls the feed: the
  * target has `touch-action: pan-y`, so the browser cancels the pointer as
  * soon as it takes over.
+ *
+ * With `scrub: false` (the collection viewer, where a sideways swipe moves to
+ * the next item) horizontal drags are left to the browser too, and only the
+ * taps remain.
  */
 export function useVideoGestures(
     videoRef: RefObject<HTMLVideoElement | null>,
-    { onTogglePlayback, enabled }: { onTogglePlayback: () => void; enabled: boolean }
+    {
+        onTogglePlayback,
+        enabled,
+        scrub: canScrub = true,
+    }: { onTogglePlayback: () => void; enabled: boolean; scrub?: boolean }
 ) {
     const [skip, setSkip] = useState<SkipFeedback | null>(null)
     const [scrub, setScrub] = useState<ScrubFeedback | null>(null)
@@ -182,7 +190,7 @@ export function useVideoGestures(
 
         if (g.mode === 'pending') {
             if (Math.abs(dx) > TAP_SLOP_PX && Math.abs(dx) >= 1.5 * Math.abs(dy)) {
-                if (!Number.isFinite(video.duration) || video.duration <= 0) {
+                if (!canScrub || !Number.isFinite(video.duration) || video.duration <= 0) {
                     g.mode = 'ignored'
                     return
                 }

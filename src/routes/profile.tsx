@@ -6,13 +6,15 @@ import { useDialog } from '../hooks/useDialog'
 import ShareList from '../components/shareList'
 import VideoCard from '../components/videoCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import MediaTile from '../components/mediaTile'
+import { type MediaEntry, useMediaLookup, videoEntry } from '../hooks/useMedia'
 import { useReactions } from '../hooks/useReactions'
 import { useSession, useSessionActions } from '../hooks/useSession'
-import { VIDEOS_CHANGED_EVENT, useVideos } from '../hooks/useVideos'
+import { VIDEOS_CHANGED_EVENT } from '../hooks/useVideos'
 import { loginHint } from '../lib/accounts'
 import { downloadVideo } from '../lib/download'
 import { apiFetch } from '../lib/session'
-import type { LocalVideo, PublicUser } from '../types/api'
+import type { PublicUser } from '../types/api'
 import authStyles from './auth.module.css'
 import profileStyles from './profile.module.css'
 import styles from './sharedGrid.module.css'
@@ -25,9 +27,8 @@ type ProfileTab = (typeof PROFILE_TABS)[number]
 const TAB_LABEL: Record<ProfileTab, string> = { videos: 'الفيديوهات', saved: 'المحفوظات', liked: 'الإعجابات' }
 const TAB_ICON = { videos: MdOutlineVideoLibrary, saved: MdBookmarkBorder, liked: MdFavoriteBorder }
 
-/** Videos in the order of `ids`, skipping any no longer in the list. */
-function pick(videos: LocalVideo[], ids: string[]): LocalVideo[] {
-    const byId = new Map(videos.map((v) => [v.videoId, v]))
+/** Media in the order of `ids`, skipping any that is gone or hidden. */
+function pick(byId: Map<string, MediaEntry>, ids: string[]): MediaEntry[] {
     return ids.flatMap((id) => byId.get(id) ?? [])
 }
 
@@ -41,7 +42,8 @@ const ProfilePage = () => {
 
     const session = useSession()
     const { logout, logoutEverywhere, changePassword } = useSessionActions()
-    const { videos, social: serverSocial, isDemo, isLoading } = useVideos()
+    const { byId, videos: videoList } = useMediaLookup()
+    const { videos, social: serverSocial, isDemo, isLoading } = videoList
     const reactions = useReactions(serverSocial)
     const dialog = useDialog()
 
@@ -60,8 +62,8 @@ const ProfilePage = () => {
     const myVideos = isDemo ? videos : videos.filter((v) => v.uploaderId && v.uploaderId === user?.id)
     // The owner can switch to every video, to manage them from here.
     const listedVideos = isOwner && showAll ? videos : myVideos
-    const savedVideos = pick(videos, reactions.savedIds)
-    const likedVideos = pick(videos, reactions.likedIds)
+    const savedMedia = pick(byId, reactions.savedIds)
+    const likedMedia = pick(byId, reactions.likedIds)
 
     // Uploader names for the owner's list.
     const members = useSWR<{ users: PublicUser[] }>(isOwner ? '/api/admin/users' : null, (path: string) =>
@@ -153,8 +155,8 @@ const ProfilePage = () => {
     const name = user?.displayName ?? 'زائر تجريبي'
     const counts: Record<ProfileTab, number> = {
         videos: myVideos.length,
-        saved: savedVideos.length,
-        liked: likedVideos.length,
+        saved: savedMedia.length,
+        liked: likedMedia.length,
     }
 
     const emptyText: Record<ProfileTab, { title: string; text: string }> = {
@@ -166,15 +168,16 @@ const ProfilePage = () => {
         },
         saved: {
             title: 'لا توجد عناصر محفوظة بعد',
-            text: 'اضغط على رمز الحفظ في أي فيديو ليظهر هنا.',
+            text: 'اضغط على رمز الحفظ في أي فيديو أو صورة ليظهر هنا.',
         },
         liked: {
             title: 'لا توجد إعجابات بعد',
-            text: 'اضغط على رمز القلب في أي فيديو ليظهر هنا.',
+            text: 'اضغط على رمز القلب في أي فيديو أو صورة ليظهر هنا.',
         },
     }
 
-    const shown = tab === 'videos' ? listedVideos : tab === 'saved' ? savedVideos : likedVideos
+    const shown: MediaEntry[] =
+        tab === 'videos' ? listedVideos.map(videoEntry) : tab === 'saved' ? savedMedia : likedMedia
 
     return (
         <div className={styles.container}>
@@ -205,6 +208,54 @@ const ProfilePage = () => {
                         </div>
                     ))}
                 </div>
+
+                {user && (
+                    <div className={styles.profileActions}>
+                        {user.role === 'owner' && (
+                            <Link to="/admin" className={styles.profileAction}>
+                                إدارة المجتمع
+                            </Link>
+                        )}
+                        <button type="button" className={styles.profileAction} onClick={() => setShowPassword((v) => !v)}>
+                            تغيير كلمة المرور
+                        </button>
+                        <button type="button" className={styles.profileAction} onClick={logout}>
+                            تسجيل الخروج
+                        </button>
+                        <button type="button" className={styles.profileAction} onClick={signOutEverywhere}>
+                            تسجيل الخروج من كل الأجهزة
+                        </button>
+                    </div>
+                )}
+
+                {showPassword && (
+                    <form className={styles.profileForm} onSubmit={submitPassword}>
+                        <input
+                            className={authStyles.input}
+                            type="password"
+                            placeholder="كلمة المرور الحالية"
+                            autoComplete="current-password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            required
+                        />
+                        <input
+                            className={authStyles.input}
+                            type="password"
+                            placeholder="كلمة المرور الجديدة (10 أحرف أو أكثر)"
+                            autoComplete="new-password"
+                            minLength={10}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            required
+                        />
+                        <button type="submit" className={`${authStyles.button} ${authStyles.button_primary}`}>
+                            حفظ
+                        </button>
+                    </form>
+                )}
+
+                {message && <p className={message.ok ? authStyles.success : authStyles.error}>{message.text}</p>}
             </header>
 
             <div className={profileStyles.tabs} role="tablist" aria-label="محتوى الملف الشخصي">
@@ -255,13 +306,29 @@ const ProfilePage = () => {
                         </button>
                     </div>
                 )}
-                {tab === 'videos' && isOwner && showAll && shown.length > 0 && (
+                {tab === 'videos' && (
+                    <h2 className={`${styles.profileSectionTitle} ${profileStyles.sectionTitle}`}>
+                        {showAll ? `جميع الفيديوهات (${videos.length})` : 'مرفوعاتي'}
+                    </h2>
+                )}
+                {tab === 'videos' && showAll && shown.length > 0 && (
                     <p className={styles.profileSectionHint}>بصفتك المالك يمكنك تعديل اسم أو حذف أي فيديو.</p>
                 )}
 
                 {shown.length > 0 ? (
                     <div className={styles.grid}>
-                        {shown.map((video) => {
+                        {shown.map((entry) => {
+                            if (!entry.video) {
+                                return (
+                                    <MediaTile
+                                        key={entry.id}
+                                        media={entry}
+                                        tall
+                                        to={`/images/all?item=${encodeURIComponent(entry.id)}`}
+                                    />
+                                )
+                            }
+                            const video = entry.video
                             const manage = tab === 'videos' && !isDemo
                             return (
                                 <VideoCard
@@ -286,78 +353,18 @@ const ProfilePage = () => {
                     </div>
                 )}
 
-                {user && (
-                    <details className={profileStyles.settings}>
-                        <summary className={profileStyles.settings__summary}>الإعدادات والحساب</summary>
-
-                        <div className={styles.profileActions}>
-                            {user.role === 'owner' && (
-                                <Link to="/admin" className={styles.profileAction}>
-                                    إدارة المجتمع
-                                </Link>
-                            )}
-                            <button
-                                type="button"
-                                className={styles.profileAction}
-                                onClick={() => setShowPassword((v) => !v)}
-                            >
-                                تغيير كلمة المرور
-                            </button>
-                            <button type="button" className={styles.profileAction} onClick={logout}>
-                                تسجيل الخروج
-                            </button>
-                            <button type="button" className={styles.profileAction} onClick={signOutEverywhere}>
-                                تسجيل الخروج من كل الأجهزة
-                            </button>
+                {tab === 'videos' && !isDemo && (
+                    <>
+                        <h2 className={styles.profileSectionTitle}>روابط المشاركة</h2>
+                        <p className={styles.profileSectionHint}>
+                            {isOwner
+                                ? 'الروابط العامة التي أنشأها جميع الأعضاء. أوقف أي رابط لم يعد مطلوباً.'
+                                : 'الروابط العامة التي أنشأتها لمشاركة الفيديوهات. أوقف أي رابط لم يعد مطلوباً.'}
+                        </p>
+                        <div className={styles.profileShares}>
+                            <ShareList showCreator={isOwner} />
                         </div>
-
-                        {showPassword && (
-                            <form className={`${styles.profileForm} ${profileStyles.settings__form}`} onSubmit={submitPassword}>
-                                <input
-                                    className={authStyles.input}
-                                    type="password"
-                                    placeholder="كلمة المرور الحالية"
-                                    autoComplete="current-password"
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    required
-                                />
-                                <input
-                                    className={authStyles.input}
-                                    type="password"
-                                    placeholder="كلمة المرور الجديدة (10 أحرف أو أكثر)"
-                                    autoComplete="new-password"
-                                    minLength={10}
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                />
-                                <button type="submit" className={`${authStyles.button} ${authStyles.button_primary}`}>
-                                    حفظ
-                                </button>
-                            </form>
-                        )}
-
-                        {!isDemo && (
-                            <>
-                                <h2 className={styles.profileSectionTitle}>روابط المشاركة</h2>
-                                <p className={styles.profileSectionHint}>
-                                    {isOwner
-                                        ? 'الروابط العامة التي أنشأها جميع الأعضاء. أوقف أي رابط لم يعد مطلوباً.'
-                                        : 'الروابط العامة التي أنشأتها لمشاركة الفيديوهات. أوقف أي رابط لم يعد مطلوباً.'}
-                                </p>
-                                <div className={styles.profileShares}>
-                                    <ShareList showCreator={isOwner} />
-                                </div>
-                            </>
-                        )}
-                    </details>
-                )}
-
-                {message && (
-                    <p className={`${message.ok ? authStyles.success : authStyles.error} ${profileStyles.message}`} role="status">
-                        {message.text}
-                    </p>
+                    </>
                 )}
             </main>
         </div>

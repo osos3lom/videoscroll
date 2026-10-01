@@ -1,6 +1,7 @@
 import { type FC, type JSX, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MdAdd, MdClose } from 'react-icons/md'
+import { IMAGES_CHANGED_EVENT } from '../../hooks/useImages'
 import { VIDEOS_CHANGED_EVENT } from '../../hooks/useVideos'
 import { ApiError } from '../../lib/session'
 import { cancelUpload, getUploadStatus, uploadFile } from '../../lib/uploader'
@@ -45,6 +46,7 @@ const Upload: FC = (): JSX.Element => {
                 const status = await getUploadStatus(uploadId, signal)
                 if (status.state === 'ready') {
                     window.dispatchEvent(new Event(VIDEOS_CHANGED_EVENT))
+                    window.dispatchEvent(new Event(IMAGES_CHANGED_EVENT))
                     setPhase({ kind: 'done', message: `“${fileName}” تم النشر بنجاح` })
                     return
                 }
@@ -135,7 +137,7 @@ const Upload: FC = (): JSX.Element => {
             <input
                 type="file"
                 ref={inputRef}
-                accept="video/*"
+                accept="video/*,image/jpeg,image/png,image/webp,image/gif"
                 onChange={handleFile}
                 style={{ display: 'none' }}
             />

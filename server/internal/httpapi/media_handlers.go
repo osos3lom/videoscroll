@@ -19,7 +19,7 @@ import (
 
 // VideosResponse is mirrored by `VideosResponse` in src/types/api.ts.
 type VideosResponse struct {
-	Data                []media.Meta               `json:"data"`
+	Data                []media.Meta           `json:"data"`
 	Social              map[string]VideoSocial `json:"social"`
 	MediaToken          string                 `json:"mediaToken"`
 	MediaTokenExpiresAt time.Time              `json:"mediaTokenExpiresAt"`

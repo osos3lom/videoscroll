@@ -3,6 +3,7 @@ package httpapi
 import (
 	"net/http"
 
+	"github.com/osos3lom/videoscroll/server/internal/collections"
 	"github.com/osos3lom/videoscroll/server/internal/jobs"
 	"github.com/osos3lom/videoscroll/server/internal/media"
 	"github.com/osos3lom/videoscroll/server/internal/reactions"
@@ -67,10 +68,24 @@ var errorCodes = map[string]string{
 	"expiry must be 1, 7 or 30 days, or 0 for no expiry":            "invalid_request",
 	"too many people are watching shared videos, try again shortly": "public_busy",
 
-	// Likes, saves and collections
-	"media not found":                 "media_not_found",
-	reactions.ErrLimit.Error():         "too_many_items",
-	"too many items in one request":   "invalid_request",
+	// Images, likes, saves and collections
+	jobs.ErrHEIC.Error():                "heic_unsupported",
+	jobs.ErrImageTooLarge.Error():       "image_too_large",
+	jobs.ErrTooManyUploads.Error():      "too_many_uploads",
+	"image not found":                   "image_not_found",
+	"could not delete image":            "server_error",
+	"media not found":                   "media_not_found",
+	reactions.ErrLimit.Error():          "too_many_items",
+	"too many items in one request":     "invalid_request",
+	"collection not found":              "collection_not_found",
+	collections.ErrItemNotFound.Error(): "item_not_found",
+	collections.ErrInvalidTitle.Error(): "invalid_collection_name",
+	collections.ErrDescription.Error():  "invalid_description",
+	collections.ErrInvalidField.Error(): "invalid_request",
+	collections.ErrBadOrder.Error():     "stale_order",
+	collections.ErrFull.Error():         "collection_full",
+	collections.ErrTooMany.Error():      "too_many_collections",
+	"image categories hold images only": "images_only",
 
 	// Unexpected failures: the details are in the server log.
 	"could not save":              "server_error",

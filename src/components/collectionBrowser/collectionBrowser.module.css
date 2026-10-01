@@ -1,0 +1,257 @@
+.browser {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000000;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+/* Vertical: one collection per screen. */
+.rows {
+    width: 100%;
+    height: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scroll-snap-type: y mandatory;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.row {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    overflow: hidden;
+}
+
+/* Horizontal: one item per screen, within the collection. */
+.track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+.slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    position: relative;
+}
+
+.emptyRow {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 0 32px;
+    text-align: center;
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    background: radial-gradient(circle at 50% 40%, #1c1c1c, #000000 70%);
+}
+
+.top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 28px 12px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+    pointer-events: none;
+}
+
+.top > * {
+    pointer-events: auto;
+}
+
+.heading {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.title span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 3px;
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-variant-numeric: tabular-nums;
+}
+
+.kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.rowPos {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.round {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.round:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.round:focus-visible,
+.chevron:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.dots {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    z-index: 6;
+    display: flex;
+    gap: 5px;
+    pointer-events: none;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.dot_on {
+    width: 16px;
+    border-radius: 3px;
+    background: #ffffff;
+}
+
+/* Like / save / add / download, at the same place as the feed's sidebar. */
+.actions {
+    position: absolute;
+    inset-inline-end: 10px;
+    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Desktop and mouse: explicit arrows. Touch screens swipe. */
+.chevron {
+    display: none;
+}
+
+.rowNav {
+    display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .chevron {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.45);
+        color: #ffffff;
+        cursor: pointer;
+        opacity: 0.75;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .chevron:hover {
+        opacity: 1;
+    }
+
+    .chevron:disabled {
+        opacity: 0.2;
+        cursor: default;
+    }
+
+    .chevron_left {
+        left: 16px;
+    }
+
+    .chevron_right {
+        right: 16px;
+    }
+
+    .rowNav {
+        position: absolute;
+        right: 16px;
+        bottom: 170px;
+        z-index: 7;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .actions {
+        bottom: 200px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rows,
+    .track {
+        scroll-behavior: auto;
+    }
+}
